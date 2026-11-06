@@ -1,0 +1,13 @@
+# downloaded originals (≈3 GB) — re-fetched by the pipeline
+raw/
+*.log
+__pycache__/
+*.zip
+# page variants built for the Claude artifact and old template backups
+site/law-trail.html
+site/template_*.html
+site/detail-*.json
+shtrack_home.html
+footprints_old.json
+footprints_52.json
+laws_52.json

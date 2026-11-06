@@ -1,0 +1,1345 @@
+<title>Law Trail</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app shell. Sticky top bar (brand, colour-coded view tabs, page-wide filters).
+   One view visible at a time: Overview is a bento of colour tiles; each section view opens with a
+   tinted header block followed by a grid of tiles. Records open in a drawer tinted by entity type. */
+:root{
+  --bg:#f3f4f6; --surface:#ffffff; --ink:#15171c; --muted:#5d6370; --rule:#e2e4e9;
+  /* section colours: tint (tile ground), ink (text on tint), strong (marks, active tab) */
+  --inf-tint:#ffe2d8; --inf-ink:#9a3416; --inf:#ec6340;
+  --ppl-tint:#dfe7ff; --ppl-ink:#2442a3; --ppl:#3e68e0;
+  --org-tint:#d6f1e2; --org-ink:#17663f; --org:#2d9a63;
+  --law-tint:#fff0bf; --law-ink:#6e5200; --law:#d9a515;
+  --ok:#2c7a49; --ok-soft:#e1f2e7; --bad:#b03a2a; --bad-soft:#fbe4df; --warn:#8a5d00; --warn-soft:#fbecc8;
+  --scrim:rgb(15 17 22 / .4);
+  --display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r-lg:24px; --r-md:16px; --r-sm:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101216; --surface:#1a1d23; --ink:#eceef2; --muted:#9aa1ad; --rule:#2b2f37;
+  --inf-tint:#3b2119; --inf-ink:#ffb49e; --inf:#f07a58;
+  --ppl-tint:#1c2647; --ppl-ink:#b4c6ff; --ppl:#7092f0;
+  --org-tint:#15342a; --org-ink:#9fe0bd; --org:#4cbc84;
+  --law-tint:#3a3112; --law-ink:#f3d77a; --law:#e8bb3a;
+  --ok:#7ccb97; --ok-soft:#18321f; --bad:#f19484; --bad-soft:#3a1d18; --warn:#e9be62; --warn-soft:#352a10;
+  --scrim:rgb(0 0 0 / .55); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#1a1d23; --ink:#eceef2; --muted:#9aa1ad; --rule:#2b2f37;
+  --inf-tint:#3b2119; --inf-ink:#ffb49e; --inf:#f07a58;
+  --ppl-tint:#1c2647; --ppl-ink:#b4c6ff; --ppl:#7092f0;
+  --org-tint:#15342a; --org-ink:#9fe0bd; --org:#4cbc84;
+  --law-tint:#3a3112; --law-ink:#f3d77a; --law:#e8bb3a;
+  --ok:#7ccb97; --ok-soft:#18321f; --bad:#f19484; --bad-soft:#3a1d18; --warn:#e9be62; --warn-soft:#352a10;
+  --scrim:rgb(0 0 0 / .55); color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-padding-top:calc(140px + env(safe-area-inset-top,0px))}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ppl);outline-offset:2px}
+
+/* section theming: any element with data-sec gets --t (tint), --i (ink), --s (strong) */
+[data-sec="influence"]{--t:var(--inf-tint);--i:var(--inf-ink);--s:var(--inf)}
+[data-sec="people"]{--t:var(--ppl-tint);--i:var(--ppl-ink);--s:var(--ppl)}
+[data-sec="orgs"]{--t:var(--org-tint);--i:var(--org-ink);--s:var(--org)}
+[data-sec="laws"]{--t:var(--law-tint);--i:var(--law-ink);--s:var(--law)}
+[data-sec="overview"]{--t:var(--surface);--i:var(--ink);--s:var(--ink)}
+
+/* ---------- top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--surface);border-bottom:1px solid var(--rule)}
+.top .row1{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:12px 10px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+.brand b{font:700 19px/1 var(--display);letter-spacing:-.01em}
+.brand span{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:100%}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:500;font-size:14px;white-space:nowrap;cursor:pointer}
+.tab i{width:9px;height:9px;border-radius:50%;background:var(--s);flex:none}
+.tab:hover{background:var(--t);border-color:transparent;color:var(--i)}
+.tab[aria-current="page"]{background:var(--s);border-color:var(--s);color:#fff}
+[data-sec="overview"].tab[aria-current="page"]{background:var(--ink);color:var(--surface)}
+.tab[aria-current="page"] i{background:#fff}
+[data-sec="overview"].tab[aria-current="page"] i{background:var(--surface)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:0 12px}
+.filters label{display:inline-flex;align-items:center;min-width:0;max-width:100%;flex:0 1 auto}
+.filters #fParty,.filters #fSig{width:200px}.filters #fNs{width:210px}.filters #fType{width:270px}.filters #fLaw{width:280px}
+.filters label span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.filters select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--bg);border:1px solid transparent;border-radius:999px;padding:7px 30px 7px 12px;min-width:0;max-width:min(100%,300px);text-overflow:ellipsis;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat;cursor:pointer}
+.filters select.set{background-color:var(--ink);color:var(--surface);background-image:linear-gradient(45deg,transparent 50%,var(--surface) 50%),linear-gradient(135deg,var(--surface) 50%,transparent 50%)}
+.filters .clear{background:none;border:0;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:13px;padding:6px}
+.filters .ftitle{font-size:12.5px;color:var(--muted);margin-right:2px}
+@media (max-width:640px){.filters label{flex:1 1 calc(50% - 8px)}.filters select,.filters #fParty,.filters #fSig,.filters #fType,.filters #fLaw,.filters #fNs{width:100%;max-width:100%}.filters .ftitle{display:none}.brand span{display:none}}
+
+/* ---------- views */
+main{padding-block:24px 64px}
+.view{display:grid;gap:18px}
+.hero{background:var(--t);color:var(--i);border-radius:var(--r-lg);padding:clamp(20px,4vw,36px);display:grid;gap:10px}
+.hero h1{font:700 clamp(26px,4.2vw,40px)/1.08 var(--display);margin:0;letter-spacing:-.015em;text-wrap:balance}
+.hero p{margin:0;max-width:72ch;font-size:15.5px}
+.hero .nums{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:6px}
+.hero .nums div{display:grid}
+.hero .nums b{font:700 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.hero .nums span{font-size:13px;opacity:.85}
+.subhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-top:8px}
+.subhead h2{font:700 20px/1.2 var(--display);margin:0;letter-spacing:-.01em}
+.subhead .count{font:500 12.5px/1 var(--mono);color:var(--muted)}
+.subhead p{flex-basis:100%;margin:0;color:var(--muted);max-width:76ch;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr))}
+.tile{background:var(--surface);border-radius:var(--r-md);padding:18px;display:grid;gap:10px;align-content:start;min-width:0;border:1px solid var(--rule)}
+.tile.tinted{background:var(--t);color:var(--i);border-color:transparent}
+.tile h3{font:600 16px/1.3 var(--body);margin:0;text-wrap:balance}
+.tile .meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--muted)}
+.tile.tinted .meta{color:inherit;opacity:.85}
+.tile.click{cursor:pointer;text-align:left;width:100%;font:inherit}
+.tile.click:hover{border-color:var(--s);box-shadow:0 0 0 1px var(--s)}
+.empty{color:var(--muted);font-size:14px;margin:0}
+
+/* overview bento */
+.bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(150px,auto);gap:14px}
+.bento .b{background:var(--t);color:var(--i);border-radius:var(--r-lg);padding:22px;display:grid;gap:12px;align-content:space-between;min-width:0;border:0;text-align:left;cursor:pointer;font:inherit;position:relative}
+.bento .b:hover{box-shadow:inset 0 0 0 2px var(--s)}
+.bento .b .k{font:500 11.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.bento .b .k i{width:9px;height:9px;border-radius:50%;background:var(--s)}
+.bento .b .big{font:700 clamp(34px,4.6vw,56px)/1 var(--display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.bento .b .lbl{font-size:15px;font-weight:500}
+.bento .b .go{font-weight:600;font-size:14px}
+.bento .b .go::after{content:" →"}
+.bento .b.plain{background:var(--surface);color:var(--ink);border:1px solid var(--rule);cursor:default}
+.bento .b.plain:hover{box-shadow:none}
+.b-inf{grid-column:span 2;grid-row:span 2}
+.b-ppl{grid-column:span 2}
+.b-org{grid-column:span 1}
+.b-law{grid-column:span 1}
+.b-sig{grid-column:span 2}
+.b-how{grid-column:span 4}
+@media (max-width:980px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.b-inf,.b-ppl,.b-sig,.b-how,.b-lnk{grid-column:span 2}.b-inf{grid-row:auto}}
+@media (max-width:560px){.bento{grid-template-columns:1fr}.bento .b{grid-column:auto!important}}
+.preview{background:var(--surface);color:var(--ink);border-radius:var(--r-sm);padding:12px 14px;display:grid;gap:6px;font-size:14px}
+.preview q{quotes:"…" "…";color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:13px;align-items:center}
+.bar .track{grid-column:1/-1;height:7px;border-radius:4px;background:color-mix(in srgb,var(--s) 18%,transparent);overflow:hidden}
+.bar .track b{display:block;height:100%;background:var(--s);border-radius:4px}
+.bar span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .v{font-variant-numeric:tabular-nums;opacity:.85}
+.mini-list{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px}
+.mini-list li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* pills */
+.pill{display:inline-block;font:500 11.5px/1 var(--body);padding:4px 8px;border-radius:999px;white-space:nowrap}
+.o-supported,.o-supported_in_principle,.o-partly_supported,.st-promulgated{background:var(--ok-soft);color:var(--ok)}
+.o-rejected{background:var(--bad-soft);color:var(--bad)}
+.o-inadmissible_out_of_scope,.or-added_at_second_reading,.t-strong,.ord-opinion_first{background:var(--warn-soft);color:var(--warn)}
+.o-withdrawn,.o-unclear,.st-withdrawn,.or-unclear,.or-not_found_in_report,.or-no_report,.t-partial,.ord-unclear,.st-pending,.or-in_bill_as_introduced{background:var(--bg);color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);align-items:center}
+
+/* footprint tile */
+.fp{border-left:4px solid var(--inf)}
+.fp .flow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-weight:600}
+.fp .arrow{color:var(--muted);font-weight:400;font-size:14px}
+.fp blockquote{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:0;padding:10px 12px;background:var(--inf-tint);color:var(--inf-ink);border-radius:var(--r-sm);font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
+.linkbtn{background:none;border:0;padding:0;cursor:pointer;color:inherit;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 40%,transparent);text-underline-offset:3px;font:inherit;text-align:left}
+.linkbtn:hover{text-decoration-color:currentColor}
+.ent-mp{color:var(--ppl-ink)} .ent-org{color:var(--org-ink)} .ent-law{color:var(--law-ink)}
+@media (prefers-color-scheme:light){.ent-law{color:#6e5200}}
+
+/* party / type tiles with chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--surface);color:var(--ink);border:1px solid transparent;border-radius:999px;padding:6px 11px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;max-width:100%;font-size:13.5px;text-align:left}
+.chip:hover{border-color:var(--s)}
+.chip .n{font:500 11px/1 var(--mono);color:var(--muted)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--inf);flex:none}
+.chip.quiet{color:var(--muted)}
+.tile.tinted .stat{font-size:13px;opacity:.85;font-variant-numeric:tabular-nums}
+.tile header{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;justify-content:space-between}
+.tile header h3{font:700 17px/1.25 var(--display);letter-spacing:-.01em}
+
+/* law tiles */
+.lawtile{border-top:4px solid var(--law)}
+.lawtile .t{font-weight:600;line-height:1.35}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.kpis{display:flex;gap:16px;font-size:13px;color:var(--muted)}
+.kpis b{display:block;font:600 18px/1.1 var(--body);color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* signals */
+.sig{border-left:4px solid var(--s)}
+.sig .t{font-weight:600}
+.small{font-size:13px}
+.muted{color:var(--muted)}
+.kicker{font:500 11px/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0}
+
+/* ---------- drawer */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+.drawer{position:fixed;z-index:21;background:var(--surface);color:var(--ink);display:grid;grid-template-rows:auto auto 1fr;box-shadow:0 10px 40px rgb(0 0 0 / .25)}
+@media (min-width:761px){.drawer{top:0;right:0;bottom:0;width:min(520px,94vw);padding-top:env(safe-area-inset-top,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px)}}
+@media (max-width:760px){.drawer{left:0;right:0;bottom:0;max-height:90vh;border-radius:20px 20px 0 0;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);padding-bottom:env(safe-area-inset-bottom,0px)}}
+.drawer .bar2{display:flex;align-items:center;gap:8px;padding:10px 12px}
+.drawer .bar2 .sp{flex:1}
+.iconbtn{font-size:14px;background:var(--bg);border:0;border-radius:999px;padding:7px 12px;cursor:pointer}
+.iconbtn:disabled{opacity:.4;cursor:default}
+.dhead{background:var(--t);color:var(--i);margin:0 12px;border-radius:var(--r-md);padding:16px;display:grid;gap:6px}
+.dhead h3{font:700 22px/1.15 var(--display);margin:0;letter-spacing:-.01em;overflow-wrap:anywhere}
+.dhead .facts{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13.5px;opacity:.9}
+.dhead .kicker{color:inherit;opacity:.8}
+.drawer .content{overflow:auto;padding:14px 16px 20px;display:grid;gap:16px;align-content:start;min-width:0}
+.drawer .content ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.drawer .content li{display:grid;gap:2px;font-size:14px;overflow-wrap:anywhere}
+.drawer .grid,.drawer .grid.wide{grid-template-columns:1fr}
+.drawer .fp blockquote{-webkit-line-clamp:unset;display:block}
+details.fold>summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:8px;font-weight:600;padding:10px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--rule)}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold[open]>summary{margin-bottom:14px}
+.minis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.minis div{background:var(--bg);border-radius:var(--r-sm);padding:10px;display:grid;gap:2px}
+.minis b{font:600 18px/1.1 var(--body);font-variant-numeric:tabular-nums}
+.minis span{font-size:11.5px;color:var(--muted)}
+@media (max-width:420px){.minis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.filterlink{background:var(--bg);border:0;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13px}
+.links{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px}
+.links a{color:var(--ppl-ink)}
+.tbl{overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--rule)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:500 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.prop{border-top:1px dashed var(--rule);padding-top:8px;display:grid;gap:4px}
+.prop:first-child{border-top:0;padding-top:0}
+.prop .hd{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:14px}
+.prop .tx{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.orgline{display:flex;flex-wrap:wrap;gap:6px}
+.orgline .chip{background:var(--org-tint);color:var(--org-ink);cursor:pointer}
+
+/* manifesto */
+.manifesto{background:var(--surface);border-radius:var(--r-lg);padding:clamp(24px,6vw,72px) clamp(20px,5vw,64px);display:grid;gap:clamp(18px,3vw,30px);border:1px solid var(--rule)}
+.manifesto .eyebrow{font:500 12px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
+.manifesto .m1{font:700 clamp(30px,5.4vw,64px)/1.06 var(--display);letter-spacing:-.025em;margin:0;max-width:20ch;text-wrap:balance}
+.manifesto .m2{font:500 clamp(17px,1.9vw,22px)/1.5 var(--body);margin:0;max-width:52ch;color:var(--muted)}
+.manifesto .m3{font:700 clamp(24px,3.8vw,44px)/1.12 var(--display);letter-spacing:-.02em;margin:0;max-width:24ch;text-wrap:balance}
+.hl{border-radius:.18em;padding:0 .12em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.hl-ppl{background:var(--ppl-tint);color:var(--ppl-ink)} .hl-inf{background:var(--inf-tint);color:var(--inf-ink)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:18px;border-top:1px solid var(--rule);padding-top:clamp(18px,3vw,28px)}
+.rules div{display:grid;gap:4px}
+.rules b{font:600 16px/1.3 var(--body)}
+.rules span{color:var(--muted);font-size:14.5px}
+.jump{justify-self:start;font-weight:600;text-decoration:none;background:var(--ink);color:var(--surface);border-radius:999px;padding:10px 18px}
+.lenses{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+@media (max-width:1100px){.lenses{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:760px){.lenses{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.lenses{grid-template-columns:1fr}}
+.lens{background:var(--t);color:var(--i);border-radius:var(--r-lg);padding:22px;display:grid;gap:10px;align-content:start;text-align:left;border:0;cursor:pointer;font:inherit}
+.lens:hover{box-shadow:inset 0 0 0 2px var(--s)}
+.lens .k{font:500 11.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;display:flex;gap:8px;align-items:center}
+.lens .k i{width:9px;height:9px;border-radius:50%;background:var(--s)}
+.lens .q{font:700 clamp(20px,2.1vw,25px)/1.15 var(--display);letter-spacing:-.015em;text-wrap:balance}
+.lens .d{font-size:14.5px;line-height:1.5}
+.lens .go{font-weight:600;font-size:14px}
+.lens .go::after{content:" →"}
+.datahead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin-top:10px}
+.datahead h2{font:700 clamp(22px,2.6vw,30px)/1.15 var(--display);margin:0;letter-spacing:-.015em}
+.datahead span{color:var(--muted);font-size:14px}
+.hero .kick{font:500 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;display:flex;gap:8px;align-items:center;margin:0}
+.hero .kick i{width:9px;height:9px;border-radius:50%;background:var(--s)}
+.hero .how{font-size:14px;opacity:.9}
+
+/* ---------- law page */
+.backbtn{justify-self:start;background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:500}
+.lp-hero h1{font-size:clamp(22px,3.2vw,34px)}
+.lp-hero .links a{color:inherit}
+.panel2{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);padding:clamp(16px,3vw,26px);display:grid;gap:14px;min-width:0}
+.panel2 h2{font:700 19px/1.2 var(--display);margin:0;letter-spacing:-.01em}
+.panel2 .lead{margin:-6px 0 0;color:var(--muted);font-size:14px;max-width:72ch}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:0;counter-reset:st}
+.step{position:relative;padding:14px 10px 4px 0;display:grid;gap:2px;align-content:start}
+.step::before{content:"";position:absolute;top:5px;left:0;right:0;height:3px;background:var(--rule)}
+.step::after{content:"";position:absolute;top:0;left:0;width:13px;height:13px;border-radius:50%;background:var(--surface);border:3px solid var(--law)}
+.step.done::before{background:var(--law)}
+.step.miss::after{border-color:var(--rule)}
+.step.last::before{right:auto;width:13px}
+.step b{font-size:13.5px;line-height:1.25}
+.step .d{font:500 12.5px/1.2 var(--mono);color:var(--muted)}
+.step .gap{font-size:12px;color:var(--law-ink);background:var(--law-tint);border-radius:999px;padding:2px 7px;justify-self:start;margin-top:4px}
+@media (max-width:640px){.steps{grid-template-columns:1fr}.step{padding:0 0 14px 24px}.step::before{top:0;bottom:0;left:5px;right:auto;width:3px;height:auto}.step::after{top:2px}.step.last::before{display:none}}
+.strip2{position:relative;height:74px;margin:6px 44px 0}
+.strip2 .rail{position:absolute;left:0;right:0;top:40px;height:6px;border-radius:3px;background:var(--bg)}
+.strip2 .win{position:absolute;top:36px;height:14px;border-radius:4px;background:var(--law-tint);border:1px dashed var(--law)}
+.strip2 .tick{position:absolute;top:30px;width:2px;height:26px;background:var(--law-ink)}
+.strip2 .tl{position:absolute;top:58px;transform:translateX(-50%);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.strip2 .op{position:absolute;top:6px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--org);border:2px solid var(--surface);cursor:pointer;padding:0}
+.strip2 .op.fp{background:var(--inf)}
+.strip2 .op:hover,.strip2 .op:focus-visible{transform:scale(1.35)}
+.oplist{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.oplist i{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.flowrows{display:grid;gap:10px}
+.frow{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13.5px}
+.frow .bars3{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--bg)}
+.frow .bars3 span{display:block;height:100%}
+.frow .n{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+@media (max-width:560px){.frow{grid-template-columns:1fr auto}.frow .bars3{grid-column:1/-1;grid-row:2}}
+.sw-ok{background:var(--ok)} .sw-ok2{background:color-mix(in srgb,var(--ok) 55%,var(--surface))} .sw-bad{background:var(--bad)} .sw-warn{background:var(--warn)} .sw-mute{background:color-mix(in srgb,var(--muted) 45%,var(--surface))}
+.pmap{display:flex;flex-wrap:wrap;gap:4px}
+.pmap button{width:22px;height:22px;border-radius:5px;border:0;padding:0;cursor:pointer;position:relative}
+.pmap button.fpm{box-shadow:0 0 0 2px var(--inf)}
+.k-unchanged{background:color-mix(in srgb,var(--muted) 22%,var(--surface))} .k-reworded,.k-tweaked{background:var(--law)} .k-new{background:var(--ok)} .k-deleted{background:var(--bad)} .k-other{background:var(--rule)}
+.kp-unchanged{background:var(--bg);color:var(--muted)} .kp-reworded,.kp-tweaked{background:var(--law-tint);color:var(--law-ink)} .kp-new{background:var(--ok-soft);color:var(--ok)} .kp-deleted{background:var(--bad-soft);color:var(--bad)} .kp-other{background:var(--bg);color:var(--muted)}
+.blocks2{display:grid;gap:12px}
+.pcard{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-md);padding:16px;display:grid;gap:10px;min-width:0;scroll-margin-top:150px}
+.pcard.hl{box-shadow:0 0 0 2px var(--law)}
+.pcard header{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.pcard header b{font:700 16px/1.2 var(--display)}
+.pcard .who{font-size:13.5px;color:var(--muted)}
+.difftext{font-size:14px;line-height:1.65;overflow-wrap:anywhere;max-height:260px;overflow:hidden;position:relative}
+.difftext.open{max-height:none}
+.difftext:not(.open)::after{content:"";position:absolute;left:0;right:0;bottom:0;height:60px;background:linear-gradient(transparent,var(--surface))}
+.difftext ins{background:var(--ok-soft);color:var(--ok);text-decoration:none;border-radius:3px;padding:0 2px}
+.difftext del{background:var(--bad-soft);color:var(--bad);text-decoration:line-through;border-radius:3px;padding:0 2px}
+.moretext{justify-self:start;background:none;border:0;color:var(--law-ink);font-weight:600;cursor:pointer;padding:0}
+.toggle{display:inline-flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
+.note{font-size:12.5px;color:var(--muted)}
+
+.asmpills{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.asmpills button{background:var(--surface);color:var(--ink);border:1px solid transparent;border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13.5px}
+.asmpills button[aria-pressed="true"]{background:var(--s);color:#fff}
+.asmhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin-top:6px}
+.asmhead h2{font:700 19px/1.2 var(--display);margin:0}
+.asmhead span{color:var(--muted);font-size:13.5px}
+.morebtn{justify-self:start;background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:500}
+.loading{color:var(--muted);font-size:14px}
+footer{padding-block:0 40px;color:var(--muted);font-size:13px}
+footer .wrap{display:grid;gap:6px}
+@media (prefers-reduced-motion:no-preference){
+  .view:not([hidden]){animation:rise .22s ease-out}
+  @keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .chip,.tab,.tile.click,.bento .b{transition:background .15s,border-color .15s,box-shadow .15s,color .15s}
+}
+
+/* ---------- method section colour */
+:root{--how-tint:#ebe6ff;--how-ink:#45309a;--how:#7556d8}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--how-tint:#241d40;--how-ink:#cbbcff;--how:#9a80f2}}
+:root[data-theme="dark"]{--how-tint:#241d40;--how-ink:#cbbcff;--how:#9a80f2}
+[data-sec="method"]{--t:var(--how-tint);--i:var(--how-ink);--s:var(--how)}
+:root{--lnk-tint:#ffe1ef;--lnk-ink:#8e1d57;--lnk:#d23f88}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lnk-tint:#3a1a2c;--lnk-ink:#ffb3d6;--lnk:#e8679f}}
+:root[data-theme="dark"]{--lnk-tint:#3a1a2c;--lnk-ink:#ffb3d6;--lnk:#e8679f}
+[data-sec="links"]{--t:var(--lnk-tint);--i:var(--lnk-ink);--s:var(--lnk)}
+.ent-co{color:var(--lnk-ink)}
+.covbar{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--bg)}
+.covbar span{display:block;height:100%}
+.covleg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13.5px}
+.covleg i,.netleg i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+.netleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.netwrap{overflow-x:auto;border-radius:var(--r-md);background:var(--bg)}
+.netwrap>div{min-width:640px}
+.egonet{margin-top:10px;border-radius:var(--r-sm);background:var(--bg)}
+svg.net{display:block;max-width:100%;height:auto}
+svg.net .edges line{stroke:color-mix(in srgb,var(--muted) 55%,transparent);stroke-width:1}
+svg.net .nd{cursor:pointer;outline:none}
+svg.net .nd circle,svg.net .nd rect{stroke:var(--surface);stroke-width:1.5}
+svg.net .nd:hover circle,svg.net .nd:hover rect,svg.net .nd:focus-visible circle,svg.net .nd:focus-visible rect{stroke:var(--ink);stroke-width:2.5}
+svg.net .nd circle.dash{stroke-width:2.2;stroke-dasharray:2.5 1.8}
+svg.net .nd.focus circle,svg.net .nd.focus rect{stroke:var(--ink);stroke-width:3}
+svg.net text{font:500 10.5px/1 var(--body);fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
+.netctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.lnk-tile header h3{font:600 15px/1.3 var(--body)}
+.mini-list.wrap li{white-space:normal}
+.ct-biz{background:var(--org-tint);color:var(--org-ink)} .ct-ngo{background:var(--lnk-tint);color:var(--lnk-ink)} .ct-state{background:var(--bg);color:var(--muted)}
+.lv-matched,.lv-ambiguous{background:var(--lnk-tint);color:var(--lnk-ink)} .lv-name_only{background:var(--warn-soft);color:var(--warn)} .lv-namesakes{background:var(--bad-soft);color:var(--bad)} .lv-none,.lv-nodata{background:var(--bg);color:var(--muted)}
+.drawer .content ul.ties{gap:10px;margin-top:10px}
+.drawer .content ul.ties li{gap:3px}
+.b-lnk{grid-column:span 2}
+
+/* ---------- search + language */
+.search{position:relative;flex:0 1 280px;min-width:0}
+.search input{width:100%;font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid transparent;border-radius:999px;padding:8px 14px 8px 34px}
+.search input::placeholder{color:var(--muted)}
+.search input:focus{border-color:var(--ppl);outline:none;background:var(--surface)}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted);pointer-events:none}
+.sres{position:absolute;top:calc(100% + 6px);left:0;width:min(460px,calc(100vw - 32px));max-height:min(70vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-md);box-shadow:0 12px 36px rgb(0 0 0 / .18);padding:6px;z-index:8}
+.sres .sh{font:500 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:10px 10px 6px}
+.sres [role="option"]{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 10px;align-items:center;padding:8px 10px;border-radius:var(--r-sm);cursor:pointer}
+.sres [role="option"] i{width:9px;height:9px;border-radius:50%;background:var(--s);grid-row:span 2}
+.sres [role="option"] b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sres [role="option"] span{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sres [role="option"][aria-selected="true"],.sres [role="option"]:hover{background:var(--t);color:var(--i)}
+.sres [role="option"][aria-selected="true"] span{color:inherit;opacity:.8}
+.sres .none{padding:12px;color:var(--muted);font-size:14px;margin:0}
+.langbtn{font:600 12.5px/1 var(--mono);letter-spacing:.06em;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:9px 12px;cursor:pointer}
+.langbtn:hover{border-color:var(--ink)}
+@media (max-width:640px){.search{flex:1 1 calc(100% - 70px);order:2}.langbtn{order:2}.tabs{order:3}.sres{width:calc(100vw - 32px)}}
+
+/* ---------- manifesto links */
+.jumps{display:flex;flex-wrap:wrap;gap:10px}
+.jump.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule)}
+.jump.ghost:hover{border-color:var(--ink)}
+
+/* ---------- method view */
+.msteps{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px;counter-reset:ms}
+.mstep{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-md);padding:18px;display:grid;gap:10px;align-content:start;counter-increment:ms;min-width:0}
+.mstep h3{font:700 16.5px/1.3 var(--display);margin:0;display:flex;gap:10px;align-items:baseline;letter-spacing:-.01em}
+.mstep h3::before{content:counter(ms);font:600 12px/1 var(--mono);background:var(--how-tint);color:var(--how-ink);border-radius:999px;padding:5px 8px;flex:none}
+.mstep p{margin:0;font-size:14.5px}
+.mstep .acc{font-size:13.5px;color:var(--how-ink);background:var(--how-tint);border-radius:var(--r-sm);padding:10px 12px}
+.srcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px;margin:0;padding:0;list-style:none}
+.srcs li{background:var(--bg);border-radius:var(--r-sm);padding:12px 14px;display:grid;gap:4px;font-size:14px;align-content:start}
+.srcs a{color:var(--how-ink);font-size:13px;justify-self:start}
+.lims{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.lims li{display:grid;grid-template-columns:minmax(64px,auto) minmax(0,1fr);gap:4px 16px;align-items:baseline;padding:12px 0;border-top:1px solid var(--rule);font-size:14.5px}
+.lims li:first-child{border-top:0;padding-top:0}
+.lims b{font:700 20px/1.1 var(--display);font-variant-numeric:tabular-nums;color:var(--how-ink)}
+.notbox{background:var(--inf-tint);color:var(--inf-ink);border-radius:var(--r-lg);padding:clamp(18px,3vw,30px);display:grid;gap:12px}
+.notbox h2{font:700 clamp(21px,2.6vw,28px)/1.15 var(--display);margin:0;letter-spacing:-.015em}
+.notbox p{margin:0;font-size:15.5px;max-width:70ch}
+.notbox ul{margin:0;padding-left:20px;display:grid;gap:6px;max-width:76ch}
+.enote{font-size:13px;color:var(--muted);margin:0}
+</style>
+
+<header class="top">
+ <div class="wrap row1">
+  <div class="brand"><b>Law Trail</b><span data-en="Who shapes Bulgaria's laws · 47th–52nd National Assembly · 2021–2026">Кой оформя българските закони · 47-мо – 52-ро Народно събрание · 2021–2026</span></div>
+  <div class="search" id="search">
+   <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 11l3.6 3.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+   <input id="q" type="search" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="sres" aria-autocomplete="list"
+     placeholder="Търси депутат, фирма, организация, закон" data-en-ph="Search MPs, companies, organisations, laws"
+     aria-label="Търсене по име" data-en-aria="Search by name">
+   <div class="sres" id="sres" role="listbox" hidden></div>
+  </div>
+  <button class="langbtn" id="langBtn" lang="en" aria-label="Switch to English">EN</button>
+  <nav class="tabs" aria-label="Изгледи" data-en-aria="Views">
+   <a class="tab" data-sec="overview" href="#overview" data-view="overview"><i></i><span data-en="Home">Начало</span></a>
+   <a class="tab" data-sec="influence" href="#influence" data-view="influence"><i></i><span data-en="Influence">Влияние</span></a>
+   <a class="tab" data-sec="people" href="#people" data-view="people"><i></i><span data-en="MPs">Депутати</span></a>
+   <a class="tab" data-sec="orgs" href="#orgs" data-view="orgs"><i></i><span data-en="Organisations">Организации</span></a>
+   <a class="tab" data-sec="links" href="#links" data-view="links"><i></i><span data-en="Connections">Връзки</span></a>
+   <a class="tab" data-sec="laws" href="#laws" data-view="laws"><i></i><span data-en="Laws">Закони</span></a>
+   <a class="tab" data-sec="method" href="#method" data-view="method"><i></i><span data-en="How it works">Как работи</span></a>
+  </nav>
+ </div>
+ <div class="wrap filters" role="group" aria-label="Филтри за всички изгледи" data-en-aria="Filters for all views">
+  <span class="ftitle" data-en="Filter">Филтър</span>
+  <label for="fNs"><span data-en="National Assembly">Народно събрание</span><select id="fNs"></select></label>
+  <label for="fParty"><span data-en="Parliamentary group">Парламентарна група</span><select id="fParty"></select></label>
+  <label for="fType"><span data-en="Organisation type">Вид организация</span><select id="fType"></select></label>
+  <label for="fLaw"><span data-en="Law">Закон</span><select id="fLaw"></select></label>
+  <label for="fSig"><span data-en="Show">Покажи</span><select id="fSig"></select></label>
+  <button class="clear" id="fClear" hidden data-en="Clear filters">Изчисти филтрите</button>
+ </div>
+</header>
+
+<main><div class="wrap">
+
+<section class="view" id="v-overview" data-sec="overview" aria-label="Начало" data-en-aria="Home">
+  <div class="manifesto">
+    <p class="eyebrow" data-en="Why Law Trail exists">Защо съществува Law Trail</p>
+    <p class="m1" data-en="Bulgaria's laws are rewritten in plain sight. Almost nobody reads the paperwork.">Българските закони се пренаписват пред очите на всички. Почти никой не чете документите.</p>
+    <p class="m2" data-en="Between the first and the second vote, MPs file hundreds of amendments. Business associations, unions and regulators send written opinions. The transitional and final provisions change other, unrelated laws. All of it is public, but it is scattered across scanned PDFs, committee reports and the State Gazette.">Между първото и второто гласуване депутатите внасят стотици предложения. Бизнес организации, синдикати и регулатори изпращат становища. В преходните и заключителните разпоредби се променят и други, несвързани закони. Всичко това е публично, но е разпръснато в сканирани PDF файлове, доклади на комисии и Държавен вестник.</p>
+    <p class="m3" data-en="Law Trail reads all of it and shows <span class='hl hl-ppl'>who changed the law</span> and <span class='hl hl-inf'>whose words they used</span>.">Law Trail чете всичко това и показва <span class="hl hl-ppl">кой промени закона</span> и <span class="hl hl-inf">чии думи използва</span>.</p>
+    <div class="rules">
+      <div><b data-en="Primary sources only">Само първоизточници</b><span data-en="Every item links to the original text in the State Gazette, the bill, the committee report or the opinion.">Всеки елемент води до оригиналния текст в Държавен вестник, законопроекта, доклада на комисията или становището.</span></div>
+      <div><b data-en="Signals are leads">Сигналите са следи</b><span data-en="A signal is a reason to read the document. It is never proof of wrongdoing.">Сигналът е повод да прочетете документа. Той никога не е доказателство за нарушение.</span></div>
+      <div><b data-en="Same rules for everyone">Еднакви правила за всички</b><span data-en="Every party, MP and organisation is measured with the same method.">Всяка партия, депутат и организация се оценява по един и същ метод.</span></div>
+    </div>
+    <div class="jumps"><a class="jump" href="#lenses" data-en="To the data ↓">Към данните ↓</a><a class="jump ghost" href="#method" data-view="method" data-en="How it works and its limits">Как работи и какви са ограниченията</a></div>
+  </div>
+
+  <div class="datahead" id="lenses"><h2 data-en="Five lenses">Пет гледни точки</h2><span data-en="Each view answers one question.">Всеки изглед отговаря на един въпрос.</span></div>
+  <div class="lenses">
+    <button class="lens" data-sec="influence" data-go="influence"><span class="k"><i></i><span data-en="Influence">Влияние</span></span><span class="q" data-en="Whose words made it into the law?">Чии думи влязоха в закона?</span><span class="d" data-en="Amendments that copy an organisation's opinion word for word, late changes to other laws, and attempts outside the bill's scope.">Предложения, които копират дума по дума становище на организация, както и късни промени в други закони и опити извън обхвата на законопроекта.</span><span class="go" data-en="To Influence">Към Влияние</span></button>
+    <button class="lens" data-sec="people" data-go="people"><span class="k"><i></i><span data-en="MPs">Депутати</span></span><span class="q" data-en="Who changes the laws?">Кой променя законите?</span><span class="d" data-en="Every MP by parliamentary group: bills filed, amendments and whether they passed, and company ties from the Commercial Register.">Всеки депутат по парламентарна група: внесени законопроекти, предложения и дали са приети, и връзки с фирми от Търговския регистър.</span><span class="go" data-en="To MPs">Към Депутати</span></button>
+    <button class="lens" data-sec="orgs" data-go="orgs"><span class="k"><i></i><span data-en="Organisations">Организации</span></span><span class="q" data-en="Who tries to shape them?">Кой се опитва да ги оформи?</span><span class="d" data-en="Every business association, union, regulator and NGO that sent an opinion on a law, and where its text ended up.">Всяка бизнес организация, синдикат, регулатор и НПО, изпратили становище по закон, и къде е попаднал техният текст.</span><span class="go" data-en="To Organisations">Към Организации</span></button>
+    <button class="lens" data-sec="links" data-go="links"><span class="k"><i></i><span data-en="Connections">Връзки</span></span><span class="q" data-en="Who is tied to which companies?">Кой с какви фирми е свързан?</span><span class="d" data-en="Each MP's roles in companies and organisations from the Commercial Register, and the companies several MPs share.">Ролите на всеки депутат във фирми и организации по Търговския регистър и фирмите, които няколко депутати споделят.</span><span class="go" data-en="To Connections">Към Връзки</span></button>
+    <button class="lens" data-sec="laws" data-go="laws"><span class="k"><i></i><span data-en="Laws">Закони</span></span><span class="q" data-en="What changed, and how?">Какво се промени и как?</span><span class="d" data-en="Every law from the State Gazette, traced to its bill, with every amendment and every change to other laws.">Всеки закон от Държавен вестник, проследен до законопроекта му, с всяко предложение и всяка промяна в други закони.</span><span class="go" data-en="To Laws">Към Закони</span></button>
+  </div>
+
+  <div class="datahead"><h2 data-en="At a glance">Накратко</h2><span data-en="Six National Assemblies · laws promulgated from December 2021 to November 2026">Шест народни събрания · закони, обнародвани от декември 2021 до ноември 2026 г.</span></div>
+  <div class="bento" id="bento"></div>
+</section>
+
+<section class="view" id="v-influence" data-sec="influence" hidden aria-labelledby="h-inf">
+  <div class="hero"><p class="kick"><i></i><span data-en="Influence">Влияние</span></p><h1 id="h-inf" data-en="Whose words made it into the law?">Чии думи влязоха в закона?</h1>
+   <p data-en="A text footprint is an amendment that reproduces, word for word, a written opinion an organisation filed on the same bill. Text the bill already contained is excluded. An opinion dated before the first-reading vote came first, because amendments for the second vote are filed after that vote.">Текстов отпечатък е предложение, което възпроизвежда дума по дума писмено становище, внесено от организация по същия законопроект. Текстът, който законопроектът вече съдържа, се изключва. Становище с дата преди гласуването на първо четене е подадено първо, защото предложенията за второ гласуване се внасят след това гласуване.</p><p class="how" data-en="Click an organisation or MP on any card to open their profile.">Кликнете върху организация или депутат в която и да е карта, за да отворите профила.</p>
+   <div class="nums" id="infNums"></div></div>
+  <div class="legend" id="infLegend"></div>
+  <div class="subhead"><h2 data-en="Strong footprints">Силни отпечатъци</h2><span class="count" id="cFp"></span></div>
+  <div class="grid wide" id="fps"></div>
+  <div class="subhead"><h2 data-en="Other signals">Други сигнали</h2><span class="count" id="cSig"></span><p data-en="Patterns worth a second look. Each is a reason to open the primary source and none is a finding of wrongdoing.">Модели, които заслужават втори прочит. Всеки е повод да отворите първоизточника и никой не е констатация за нарушение.</p></div>
+  <div class="grid wide" id="signals"></div>
+  <details class="fold" id="fpFold"><summary><span data-en="Partial footprints">Частични отпечатъци</span> <span class="count" id="cFpP"></span></summary>
+  <div class="grid wide" id="fpsMore"></div></details>
+</section>
+
+<section class="view" id="v-people" data-sec="people" hidden aria-labelledby="h-ppl">
+  <div class="hero"><p class="kick"><i></i><span data-en="MPs">Депутати</span></p><h1 id="h-ppl" data-en="Who changes the laws?">Кой променя законите?</h1>
+   <p data-en="MPs by parliamentary group, as the groups were in each National Assembly, most active first. A profile shows the bills filed, the amendments and the committee's decision on them, outside text in the amendments, and company ties.">Депутатите по парламентарни групи, такива каквито са били във всяко Народно събрание, най-активните първи. Профилът показва внесените законопроекти, предложенията и решението на комисията по тях, текст от външни организации в предложенията и връзките с фирми.</p><p class="how" data-en="Click a name to open the profile, or search by name at the top.">Кликнете върху име, за да отворите профила, или потърсете по име горе.</p>
+   <div class="legend" style="color:inherit" id="pplLegend"></div>
+   <div class="asmpills" id="pplAsm"></div>
+   <div class="nums" id="pplNums"></div></div>
+  <div class="grid wide" id="groups"></div>
+</section>
+
+<section class="view" id="v-orgs" data-sec="orgs" hidden aria-labelledby="h-org">
+  <div class="hero"><p class="kick"><i></i><span data-en="Organisations">Организации</span></p><h1 id="h-org" data-en="Who tries to shape the laws?">Кой се опитва да оформи законите?</h1>
+   <p data-en="Everyone who sent a written opinion on these laws, grouped by type. Bulgaria has no lobbying register, so these opinions are the visible part of outside influence.">Всички, които са изпратили писмено становище по тези закони, групирани по вид. В България няма регистър на лобистите, затова тези становища са видимата част от външното влияние.</p><p class="how" data-en="Click a name to see which laws the organisation wrote on and where its text ended up. The number is the count of laws.">Кликнете върху име, за да видите по кои закони е писала организацията и къде е попаднал текстът ѝ. Числото показва броя закони.</p>
+   <div class="nums" id="orgNums"></div></div>
+  <div class="grid wide" id="orgGroups"></div>
+</section>
+
+<section class="view" id="v-links" data-sec="links" hidden aria-labelledby="h-lnk">
+  <div class="hero"><p class="kick"><i></i><span data-en="Connections">Връзки</span></p><h1 id="h-lnk" data-en="Who is tied to which companies?">Кой с какви фирми е свързан?</h1>
+   <p data-en="Roles of MPs in companies, associations and foundations, from the Commercial Register via ShTRAK by BIRD.BG: owners, partners, managers and board members, current and past. The network shows the companies and organisations that two or more MPs share. The parliament itself, party registrations and state posts are left out.">Ролите на депутатите във фирми, сдружения и фондации по Търговския регистър, чрез ЩРАК на BIRD.BG: собственици, съдружници, управители и членове на съвети, настоящи и минали. Мрежата показва фирмите и организациите, които двама или повече депутати споделят. Самото Народно събрание, партийните регистрации и държавните длъжности са изключени.</p>
+   <p class="how" data-en="Click a circle (MP) or a square (company) to open it. A role in a company is not wrongdoing; it matters when the company works in the area a law affects.">Кликнете кръгче (депутат) или квадратче (фирма), за да го отворите. Ролята във фирма не е нарушение; има значение, когато фирмата работи в сферата, която законът засяга.</p>
+   <div class="asmpills" id="lnkAsm"></div>
+   <div class="nums" id="lnkNums"></div></div>
+  <div class="panel2"><h2 data-en="How many MPs we could match">Колко депутати успяхме да открием</h2><div id="lnkCov" style="display:grid;gap:10px"></div></div>
+  <div class="panel2"><h2 data-en="The network">Мрежата</h2>
+    <div class="netctl" id="lnkCtl"></div>
+    <div class="netleg" id="lnkLegend"></div>
+    <div class="netwrap"><div id="lnkNet"></div></div>
+  </div>
+  <div class="subhead"><h2 data-en="Companies and organisations shared by MPs">Общи фирми и организации</h2><span class="count" id="cShared"></span><p data-en="Entities in which two or more MPs hold or held a role. Those spanning different parties come first.">Организации, в които двама или повече депутати имат или са имали роля. Първи са тези, които свързват различни партии.</p></div>
+  <div class="grid wide" id="lnkShared"></div>
+  <button class="morebtn" id="lnkMore" data-en="Show all">Покажи всички</button>
+  <div id="lnkFilersWrap" hidden style="display:grid;gap:14px"><div class="subhead"><h2 data-en="MPs' organisations that also lobby">Организации на депутати, които и лобират</h2><p data-en="Entities where an MP has a role that also filed opinions on bills.">Организации, в които депутат има роля и които са подавали становища по законопроекти.</p></div><div class="grid wide" id="lnkFilers"></div></div>
+  <div class="subhead"><h2 id="lnkGroupsHead"></h2><p data-en="◆ number of companies and organisations · ~ name match only · ? several people with this name">◆ брой фирми и организации · ~ само по име · ? няколко души с това име</p></div>
+  <div class="grid wide" id="lnkGroups"></div>
+</section>
+
+<section class="view" id="v-laws" data-sec="laws" hidden aria-labelledby="h-law">
+  <div class="hero"><p class="kick"><i></i><span data-en="Laws">Закони</span></p><h1 id="h-law" data-en="What changed, and how?">Какво се промени и как?</h1>
+   <p data-en="Every law promulgated in the State Gazette in the period, traced to its bill on parliament.bg. Law titles are shown in the original Bulgarian.">Всеки закон, обнародван в Държавен вестник през периода, проследен до законопроекта му на parliament.bg.</p><p class="how" data-en="Open a law to see its sponsors, the opinions, the changes to other laws and every amendment for the second vote.">Отворете закон, за да видите вносителите, становищата, промените в други закони и всяко предложение за второ гласуване.</p>
+   <div class="asmpills" id="lawAsm"></div>
+   <div class="nums" id="lawNums"></div></div>
+  <div id="ledger" style="display:grid;gap:14px"></div>
+</section>
+
+<section class="view" id="v-law" data-sec="laws" hidden aria-labelledby="lpTitle">
+  <button class="backbtn" id="lpBack" data-en="← Back">← Назад</button>
+  <div class="hero lp-hero" id="lpHero"></div>
+  <div class="panel2"><h2 data-en="The law's path">Пътят на закона</h2><p class="lead" data-en="From filing to promulgation. Below: when organisations sent opinions relative to the votes and the amendment deadline.">От внасянето до обнародването. Отдолу: кога организациите са изпратили становища спрямо гласуванията и срока за предложения.</p>
+    <div class="steps" id="lpSteps"></div>
+    <div style="overflow-x:auto"><div style="min-width:520px"><div class="strip2" id="lpStrip"></div></div></div>
+    <div class="oplist" id="lpOpLegend"></div>
+  </div>
+  <div class="panel2"><h2 data-en="Who proposed what, and what passed">Кой предложи и какво мина</h2><p class="lead" data-en="Amendments for the second vote by parliamentary group, and the committee's decision on them.">Предложенията за второ гласуване по парламентарни групи и решението на комисията по тях.</p>
+    <div class="flowrows" id="lpFlow"></div>
+    <div class="legend" id="flowLegend"></div>
+  </div>
+  <div class="panel2"><h2 data-en="Before and after">Преди и след</h2><p class="lead" data-en="The sponsor's text against the committee's final wording, paragraph by paragraph. <ins style='background:var(--ok-soft);color:var(--ok);text-decoration:none;padding:0 3px;border-radius:3px'>added</ins> <del style='background:var(--bad-soft);color:var(--bad);padding:0 3px;border-radius:3px'>removed</del>. The squares are the law's paragraphs; click one to jump to it. The legal text is shown in the original Bulgarian.">Текстът на вносителя срещу окончателната редакция на комисията, параграф по параграф. <ins style="background:var(--ok-soft);color:var(--ok);text-decoration:none;padding:0 3px;border-radius:3px">добавено</ins> <del style="background:var(--bad-soft);color:var(--bad);padding:0 3px;border-radius:3px">премахнато</del>. Квадратчетата са параграфите на закона; кликнете, за да отидете до тях.</p>
+    <div class="pmap" id="lpMap"></div>
+    <div class="legend" id="kindLegend"></div>
+    <label class="toggle" for="lpAll"><input type="checkbox" id="lpAll"> <span data-en="Show unchanged paragraphs too">Покажи и непроменените параграфи</span></label>
+    <div class="blocks2" id="lpBlocks"></div>
+  </div>
+  <div class="panel2"><h2 data-en="More on this law">Още за закона</h2><div id="lpMore" style="display:grid;gap:16px"></div></div>
+</section>
+
+<section class="view" id="v-method" data-sec="method" hidden aria-labelledby="h-how"></section>
+
+</div></main>
+<footer><div class="wrap">
+  <span data-en="Sources: State Gazette (dv.parliament.bg); National Assembly (parliament.bg): bills, committee reports, MP profiles and opinions (scanned ones read with OCR); company ties from ЩРАК by BIRD.BG.">Източници: Държавен вестник (dv.parliament.bg); Народно събрание (parliament.bg): законопроекти, доклади на комисии, профили на депутати и становища (сканираните са разчетени с OCR); връзки с фирми от ЩРАК на BIRD.BG.</span>
+  <span id="foot"></span>
+</div></footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="bar2"><button class="iconbtn" id="dBack" data-en="← Back">← Назад</button><span class="sp"></span><button class="iconbtn" id="dClose" data-en="Close ✕">Затвори ✕</button></div>
+  <div class="dhead" id="drawerHead"></div>
+  <div class="content" id="drawerBody"></div>
+</aside>
+
+<script>
+const D = __DATA__;
+const OK = new Set(["supported","supported_in_principle","partly_supported"]);
+const $ = id => document.getElementById(id);
+
+// ---------- language: Bulgarian by default for Bulgarian browsers, English otherwise; the choice is remembered
+let LANG = (()=>{ try{ const q=new URLSearchParams(location.search).get("lang"); if (q==="bg"||q==="en") return q; const s=localStorage.getItem("lt-lang"); if (s==="bg"||s==="en") return s; }catch(e){}
+  return (navigator.languages||[navigator.language||""]).some(l=>/^bg/i.test(l)) ? "bg" : "en"; })();
+const T = (bg, en) => LANG==="en" ? en : bg;
+const DICT = {
+ bg:{ OUT:{supported:"прието",supported_in_principle:"прието по принцип",partly_supported:"прието частично",rejected:"отхвърлено",withdrawn:"оттеглено",inadmissible_out_of_scope:"недопустимо",unclear:"неясно"},
+      TIER:{strong:"силен",partial:"частичен"},
+      ORI:{added_at_second_reading:"добавено на второ четене",in_bill_as_introduced:"в първоначалния законопроект",unclear:"неясен произход",not_found_in_report:"не е в доклада",no_report:"няма доклад"},
+      ORD:{opinion_first:"становището е първо",unclear:"редът е неясен"},
+      ST:{promulgated:"закон",pending:"висящ",withdrawn:"оттеглен"},
+      OTYPE:[["business","Бизнес и браншови организации"],["union","Синдикати"],["professional","Професионални организации"],["public","Държавни институции"],["civil","Граждански организации и лица"]],
+      KIND:{unchanged:"без промяна",reworded:"променен",tweaked:"техническа редакция",new:"нов",deleted:"отпаднал",other:"друго"},
+      SHORT:{business:"Бизнес",union:"Синдикати",professional:"Професионални",public:"Държавни",civil:"Граждански"},
+      NSO:{"52":"52-ро","51":"51-во","50":"50-то","49":"49-то","48":"48-мо","47":"47-мо"} },
+ en:{ OUT:{supported:"accepted",supported_in_principle:"accepted in principle",partly_supported:"partly accepted",rejected:"rejected",withdrawn:"withdrawn",inadmissible_out_of_scope:"inadmissible",unclear:"unclear"},
+      TIER:{strong:"strong",partial:"partial"},
+      ORI:{added_at_second_reading:"added at second reading",in_bill_as_introduced:"in the bill as filed",unclear:"origin unclear",not_found_in_report:"not in the report",no_report:"no report"},
+      ORD:{opinion_first:"opinion came first",unclear:"order unclear"},
+      ST:{promulgated:"law",pending:"pending",withdrawn:"withdrawn"},
+      OTYPE:[["business","Business and industry associations"],["union","Trade unions"],["professional","Professional bodies"],["public","State institutions"],["civil","Civil society and individuals"]],
+      KIND:{unchanged:"unchanged",reworded:"reworded",tweaked:"technical edit",new:"new",deleted:"deleted",other:"other"},
+      SHORT:{business:"Business",union:"Unions",professional:"Professional",public:"State",civil:"Civil society"},
+      NSO:{"52":"52nd","51":"51st","50":"50th","49":"49th","48":"48th","47":"47th"} }
+};
+let OUT, TIER, ORI, ORD, ST, OTYPE, TLABEL, KIND, SHORT, NSO;
+function setDicts(){ ({OUT, TIER, ORI, ORD, ST, OTYPE, KIND, SHORT, NSO} = DICT[LANG]); TLABEL = Object.fromEntries(OTYPE); }
+setDicts();
+
+// people and group names: transliterated in English (streamlined system, as in Bulgarian passports)
+const TLM = {а:"a",б:"b",в:"v",г:"g",д:"d",е:"e",ж:"zh",з:"z",и:"i",й:"y",к:"k",л:"l",м:"m",н:"n",о:"o",п:"p",р:"r",с:"s",т:"t",у:"u",ф:"f",х:"h",ц:"ts",ч:"ch",ш:"sh",щ:"sht",ъ:"a",ь:"y",ю:"yu",я:"ya",ѝ:"i",ё:"yo",э:"e",ы:"y"};
+const translit = s => String(s ?? "").replace(/ия(?![а-яё])/g,"ia").replace(/ИЯ(?![А-ЯЁ])/g,"IA").replace(/[а-яёѝ]/gi, c=>{ const l=c.toLowerCase(), t=TLM[l]; if (t===undefined) return c; return c===l ? t : t[0].toUpperCase()+t.slice(1); });
+const GEN = {"Алианс за права и свободи":"Alliance for Rights and Freedoms (APS)","БСП за България":"BSP for Bulgaria","БСП – ОБЕДИНЕНА ЛЕВИЦА":"BSP – United Left","Български възход":"Bulgarian Rise","ВЕЛИЧИЕ":"Velichie (Greatness)","ВЪЗРАЖДАНЕ":"Vazrazhdane (Revival)","партия ВЪЗРАЖДАНЕ":"Vazrazhdane (Revival)","ГЕРБ – СДС":"GERB-SDS","ГЕРБ-СДС":"GERB-SDS","ДПС":"DPS (Movement for Rights and Freedoms)","ДПС – Ново начало":"DPS – New Beginning","Демократична България":"Democratic Bulgaria","ИТН":"There Is Such a People (ITN)","Има Такъв Народ":"There Is Such a People (ITN)","Нечленуващи в ПГ":"Not in a group","ПП МЕЧ":"MECh","ПП – ДБ":"PP-DB (We Continue the Change – Democratic Bulgaria)","ПП-ДБ":"PP-DB (We Continue the Change – Democratic Bulgaria)","Продължаваме Промяната-Демократична България":"PP-DB (We Continue the Change – Democratic Bulgaria)","Прогресивна България":"Progressive Bulgaria","Продължаваме Промяната":"We Continue the Change (PP)","Без група / неразпознат":"No group / not matched"};
+const nm = s => LANG==="en" ? translit(s) : String(s ?? "");
+const gn = s => LANG==="en" ? (GEN[s] || translit(s)) : String(s ?? "");
+
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const isD = s => /^\d{4}-\d{2}-\d{2}/.test(s||"");
+const dt = s => !isD(s) ? (s||"—") : LANG==="en" ? `${+s.slice(8,10)} ${MON[+s.slice(5,7)-1]} ${s.slice(0,4)}` : `${s.slice(8,10)}.${s.slice(5,7)}.${s.slice(0,4)}`;
+const dts = s => !isD(s) ? "" : LANG==="en" ? `${+s.slice(8,10)} ${MON[+s.slice(5,7)-1]}` : `${s.slice(8,10)}.${s.slice(5,7)}`;
+const dvd = s => { const m=/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(s||""); return m ? dt(`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`) : (s||""); };
+const fmt = n => Number(n).toLocaleString(LANG==="en" ? "en-GB" : "bg-BG");
+const pl = (n, one, many) => n===1 ? one : many;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LAW = Object.fromEntries(D.laws.map(l => [l.id, l]));
+const MP = D.mps;
+const shortLaw = t => t.replace(/^Закон за изменение и допълнение на /,"ЗИД ").replace(/^Закон за изменение на /,"ЗИ ").replace(/^Закон за допълнение на /,"ЗД ");
+const orgIdx = Object.fromEntries(D.orgs.map((o,i)=>[o.n,i]));
+const mpLink = (id, name) => MP[id] ? `<button class="linkbtn ent-mp" data-mp="${id}">${esc(nm(name || MP[id].n))}</button>` : esc(nm(name));
+const lawLink = id => LAW[id] ? `<button class="linkbtn ent-law" data-law="${id}" lang="bg">${esc(shortLaw(LAW[id].t))}</button>` : "";
+const orgLink = n => orgIdx[n] !== undefined ? `<button class="linkbtn ent-org" data-org="${orgIdx[n]}">${esc(n)}</button>` : esc(n);
+const shortName = n => { const p=nm(n).split(" "); return p.length>2 ? p[0]+" "+p[p.length-1] : p.join(" "); };
+const count = (n,t) => n===t ? `${t}` : T(`${n} от ${t}`, `${n} of ${t}`);
+const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+const nsLabel = ns => T(`${NSO[ns]||ns} НС`, `${NSO[ns]||ns} Assembly`);
+const nsLong = ns => T(`${NSO[ns]||ns} Народно събрание`, `${NSO[ns]||ns} National Assembly`);
+const ASM = Object.fromEntries(D.asm.map(a=>[a.ns,a]));
+const yrs = a => `${a.start.slice(0,4)}–${a.end.startsWith("9999")?"":a.end.slice(0,4)}`;
+const pparse = v => { const i=(v||"").indexOf("|"); return i<0?[null,v]:[v.slice(0,i), v.slice(i+1)]; };
+const inPartyAt = (ids, ns) => { if(!F.party) return true; const [pns,pg]=pparse(F.party); return ns===pns && ids.some(i=>MP[i]?.as?.[pns]===pg); };
+const propInParty = (p, ns) => { if(!F.party) return true; const [pns,pg]=pparse(F.party); return ns===pns && (p.grp.includes(pg) || p.ids.some(i=>MP[i]?.as?.[pns]===pg)); };
+const DET = {};
+const detail = ns => DET[ns] ||= fetch(`detail-${ns}.json`).then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); });
+
+// ---------- filters
+const F = {ns:"", party:"", type:"", law:"", sig:""};
+const fNs=$("fNs"), fParty=$("fParty"), fType=$("fType"), fLaw=$("fLaw"), fSig=$("fSig"), fClear=$("fClear");
+let partyKey = null, lawKey = null;
+function fillStatic(){
+  fNs.innerHTML = `<option value="">${T("Всички народни събрания","All National Assemblies")}</option>` + D.asm.map(a=>`<option value="${a.ns}">${nsLong(a.ns)} (${yrs(a)})</option>`).join("");
+  fType.innerHTML = `<option value="">${T("Всички видове организации","All organisation types")}</option>` + OTYPE.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+  fSig.innerHTML = [["",T("Всичко","Everything")],["fp",T("Само с текстов отпечатък","Only with a text footprint")],["late",T("Късни промени в други закони","Late changes to other laws")],["inadm",T("Недопустими предложения","Inadmissible amendments")],["biz",T("Депутати с връзки с фирми","MPs with company ties")]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+  partyKey = lawKey = null;
+}
+function fillParty(){ const key = F.ns+"|"+LANG; if (partyKey === key) return; partyKey = key;
+  const gs = D.groups.filter(g=>!F.ns || g.ns===F.ns);
+  const opt = g => `<option value="${g.ns}|${esc(g.g)}">${esc(gn(g.g))}</option>`;
+  fParty.innerHTML = `<option value="">${T("Всички групи","All groups")}</option>` + (F.ns ? gs.map(opt).join("") : D.asm.map(a=>`<optgroup label="${nsLong(a.ns)}">${gs.filter(g=>g.ns===a.ns).map(opt).join("")}</optgroup>`).join("")); }
+function fillLaw(){ const key = F.ns+"|"+LANG; if (lawKey === key) return; lawKey = key;
+  fLaw.innerHTML = `<option value="">${T("Всички закони","All laws")}</option>` + D.laws.filter(l=>!F.ns || l.ns===F.ns).sort((a,b)=>b.ns.localeCompare(a.ns) || shortLaw(a.t).localeCompare(shortLaw(b.t),"bg")).map(l=>`<option value="${l.id}">${F.ns?"":NSO[l.ns]+" · "}${esc(shortLaw(l.t).slice(0,90))}</option>`).join(""); }
+const hasFp = new Set(D.fp.map(f=>f.law));
+const lateLaw = l => l.other.some(a=>a.or==="added_at_second_reading");
+const inadmLaw = l => l.props.some(p=>p.o==="inadmissible_out_of_scope");
+const biz = id => (MP[id]?.sh?.f || 0) > 0;
+const sigLaw = l => !F.sig || (F.sig==="fp" ? hasFp.has(l.id) : F.sig==="late" ? lateLaw(l) : F.sig==="inadm" ? inadmLaw(l) : l.props.some(p=>p.ids.some(biz)) || l.spi.some(biz));
+const fpOk = f => (!F.ns || f.ns===F.ns) && inPartyAt(f.ids, f.ns) && (!F.type || f.ot===F.type) && (!F.law || f.law==F.law) && (!F.sig || F.sig==="fp" || (F.sig==="biz" ? f.ids.some(biz) : sigLaw(LAW[f.law])));
+const lawOk = l => (!F.ns || l.ns===F.ns) && (!F.law || l.id==F.law) && sigLaw(l)
+  && (!F.party || l.props.some(p=>propInParty(p,l.ns)) || inPartyAt(l.spi,l.ns))
+  && (!F.type || l.ops.some(o=>o.t===F.type));
+const mpOk = id => { const m=MP[id];
+  if (F.ns && !(F.ns in m.as)) return false;
+  if (F.party){ const [pns,pg]=pparse(F.party); if (m.as[pns]!==pg) return false; }
+  if (F.law && !m.props.some(p=>p.law==F.law) && !(LAW[F.law]?.spi||[]).includes(+id)) return false;
+  if (F.sig==="fp" && !m.fp.length) return false;
+  if (F.sig==="inadm" && !m.props.some(p=>p.o==="inadmissible_out_of_scope")) return false;
+  if (F.sig==="late" && !m.props.some(p=>lateLaw(LAW[p.law]))) return false;
+  if (F.sig==="biz" && !biz(id)) return false;
+  if (F.type && !m.fp.some(k=>D.fp[k].ot===F.type)) return false;
+  return true; };
+const orgOk = o => (!F.ns || o.filings.some(f=>LAW[f.law]?.ns===F.ns)) && (!F.type || o.t===F.type) && (!F.law || o.filings.some(f=>f.law==F.law))
+  && (!F.sig || (F.sig==="fp" ? o.fp.length>0 : F.sig==="biz" ? o.fp.some(k=>D.fp[k].ids.some(biz)) : o.filings.some(f=>LAW[f.law] && sigLaw(LAW[f.law]))))
+  && (!F.party || o.fp.some(k=>inPartyAt(D.fp[k].ids, D.fp[k].ns)) || o.filings.some(f=>LAW[f.law] && LAW[f.law].props.some(p=>propInParty(p, LAW[f.law].ns))));
+
+// ---------- signals (tagged so filters apply); rebuilt when the language changes
+let SIG = [];
+function buildSig(){
+  SIG = [];
+  for (const l of D.laws) for (const a of l.other) if (a.or==="added_at_second_reading")
+    SIG.push({k:"late", laws:[l.id], ids:[], types:[], t:T("Късна промяна в друг закон: ","Late change to another law: ")+`<span lang="bg">${esc(a.law)}</span>`,
+      d:T(`Чрез ${lawLink(l.id)} (${fmt(a.ch)} знака). `,`Through ${lawLink(l.id)} (${fmt(a.ch)} characters). `) + (a.by.length ? T("От прието предложение на ","From an accepted amendment by ")+esc(a.by.map(nm).join("; "))+"." : T("Текст на комисията; не е открито предложение на депутат.","Committee text; no MP amendment found."))});
+  for (const l of D.laws){ const n=l.props.filter(p=>p.o==="inadmissible_out_of_scope"); if(!n.length) continue; const ids=[...new Set(n.flatMap(p=>p.ids))];
+    SIG.push({k:"inadm", laws:[l.id], ids, types:[], t:T(`Недопустими предложения: ${n.length}`,`Inadmissible amendments: ${n.length}`),
+      d:T(`${lawLink(l.id)}. Опити да се променят въпроси извън обхвата на законопроекта. Автори: `,`${lawLink(l.id)}. Attempts to change matters outside the bill's scope. Authors: `)+`${ids.map(i=>mpLink(i)).join(", ")}.`});}
+  const shared = {};
+  for (const f of D.fp) (shared[f.law+"|"+f.pas.slice(0,80)] ||= []).push(f);
+  for (const fs of Object.values(shared)) { const orgs=[...new Map(fs.map(f=>[f.org,f])).values()].sort((a,b)=>a.od.localeCompare(b.od)); if (orgs.length<2) continue;
+    const by = fs[0].ids.length ? fs[0].ids.map(i=>mpLink(i)).join(", ") : esc(fs[0].who.map(nm).join(", "));
+    SIG.push({k:"fp", laws:[fs[0].law], ids:fs[0].ids, types:orgs.map(f=>f.ot), t:T(`${orgs.length} организации внесоха един и същ текст`,`${orgs.length} organisations filed the same text`),
+      d:`${orgs.map(f=>`${orgLink(f.org)} (${dt(f.od)})`).join(", ")} `+T(`по ${lawLink(fs[0].law)}. Текстът стигна до предложение на ${by} (${OUT[fs[0].o]}). Общ автор или координирана кампания; най-ранното становище е вероятният източник.`,
+        `on ${lawLink(fs[0].law)}. The text reached an amendment by ${by} (${OUT[fs[0].o]}). A shared author or a coordinated campaign; the earliest opinion is the likely source.`)}); }
+  for (const e of D.echo){ const ids=[...(e.a.ids||[]),...(e.b.ids||[])]; const ga=e.a.grp.join(", "), gb=e.b.grp.join(", ");
+    const allies = (/Продължаваме|^ПП/.test(ga) && /Демократична|ДБ/.test(gb)) || (/Продължаваме|^ПП/.test(gb) && /Демократична|ДБ/.test(ga));
+    const gna = e.a.grp.map(gn).join(", "), gnb = e.b.grp.map(gn).join(", ");
+    SIG.push({k:"echo", laws:[e.law], ids, types:[], t:T(`Еднакъв текст от ${esc(gna)} и ${esc(gnb)}`,`Same text from ${esc(gna)} and ${esc(gnb)}`),
+      d:`${lawLink(e.law)}${e.ns?` (${nsLabel(e.ns)})`:""}. `+T(`${Math.round(e.jac*100)}% общ текст, признак за общ автор.`,`${Math.round(e.jac*100)}% shared text, a sign of a shared author.`)
+        +(allies ? T(" ПП и ДБ са били партньори, затова координацията е вероятното обяснение."," PP and DB were partners, so coordination is the likely explanation.") : T(" Групите са от различни политически лагери; сравнете с внесените становища."," The groups are from different political camps; compare with the filed opinions."))});}
+  const recyclers = D.orgs.filter(o=>o.t==="business" && /(рецикл|Екобул|Гумирех|Грийнтех|Трансинс|Трансис|Автоеко)/i.test(o.n));
+  if (recyclers.length>3){ const laws=[...new Set(recyclers.flatMap(o=>o.filings.map(f=>f.law)).filter(Boolean))];
+    SIG.push({k:"campaign", laws, ids:[], types:["business"], t:T(`${recyclers.length} фирми за рециклиране подадоха становища по един законопроект`,`${recyclers.length} recycling companies filed opinions on one bill`),
+      d:`${laws.map(lawLink).join(", ")}. `+T("Координирана браншова кампания; сравнете становищата с окончателния текст.","A coordinated industry campaign; compare the opinions with the final text.")});}
+}
+const sigOk = g => (!F.ns || g.laws.some(id=>LAW[id]?.ns===F.ns)) && (!F.law || g.laws.includes(+F.law)) && (!F.party || g.laws.some(id=>LAW[id] && inPartyAt(g.ids, LAW[id].ns))) && (!F.type || g.types.includes(F.type)) && (!F.sig || g.k===F.sig || (F.sig==="biz" && g.ids.some(biz)));
+const sigTile = g => `<div class="tile sig" data-sec="influence"><span class="t">${g.t}</span><span class="small muted">${g.d}</span></div>`;
+
+// ---------- tiles
+function fpCard(f){
+  const who = f.ids.length ? f.ids.slice(0,3).map(i=>mpLink(i)).join(", ") + (f.who.length>3?` +${f.who.length-3}`:"") : esc(f.who.map(nm).join(", "));
+  return `<article class="tile fp">
+   <div class="flow">${orgLink(f.org)}<span class="arrow">${T("→ текстът е в предложение на","→ its text is in an amendment by")}</span>${who}</div>
+   <div class="meta"><span class="pill t-${f.tier}">${TIER[f.tier]}</span><span class="pill ord-${f.order}">${ORD[f.order]}</span><span class="pill o-${f.o}">${OUT[f.o]}</span><span>${T(`${f.w} думи · ${Math.round(f.cov*100)}% от предложението`,`${f.w} words · ${Math.round(f.cov*100)}% of the amendment`)}</span></div>
+   <blockquote lang="bg">…${esc(f.pas)}…</blockquote>
+   <div class="meta"><span>${lawLink(f.law)}</span><span>${T("Становище","Opinion")} ${dt(f.od)}${f.fr?` · ${T("първо четене","first reading")} ${dt(f.fr)}`:""}</span><a href="${esc(f.ou)}" target="_blank" rel="noopener">${T("Становище (PDF) ↗","Opinion (PDF) ↗")}</a></div>
+  </article>`;
+}
+const activity = id => MP[id].props.length + MP[id].bills.length;
+function lawTile(l){
+  const acc = l.props.filter(p=>OK.has(p.o)).length;
+  return `<button class="tile click lawtile" data-sec="laws" data-law="${l.id}">
+   <span class="kicker">${nsLabel(l.ns)} · ${T("ДВ бр.","SG No.")} ${l.iss}${l.dvd?` · ${esc(dvd(l.dvd))}`:`/${l.dvy||""}`}</span>
+   <span class="t" lang="bg">${esc(shortLaw(l.t))}</span>
+   <span class="kpis"><span><b>${l.props.length}</b>${T("предложения","amendments")}</span><span><b>${acc}</b>${T("приети","accepted")}</span><span><b>${l.ops.length}</b>${T("становища","opinions")}</span></span>
+   <span class="badges">${hasFp.has(l.id)?`<span class="pill t-strong">${T("отпечатък","footprint")}</span>`:""}${lateLaw(l)?`<span class="pill or-added_at_second_reading">${T("късна промяна","late change")}</span>`:""}${inadmLaw(l)?`<span class="pill o-inadmissible_out_of_scope">${T("недопустими","inadmissible")}</span>`:""}${l.other.length?`<span class="pill o-unclear">${T(`променя ${l.other.length} ${pl(l.other.length,"друг закон","други закона")}`,`changes ${l.other.length} other ${pl(l.other.length,"law","laws")}`)}</span>`:""}</span>
+  </button>`;
+}
+const chipEx = (inner) => `<span class="chip" style="cursor:default;padding:2px 8px">${inner}</span>`;
+function legends(){
+  $("infLegend").innerHTML = T(
+    `<span class="pill t-strong">силен</span> дълъг дословен откъс или по-голямата част от предложението <span class="pill t-partial">частичен</span> по-кратък общ откъс <span class="pill ord-opinion_first">становището е първо</span> <span class="pill ord-unclear">редът е неясен</span>`,
+    `<span class="pill t-strong">strong</span> a long verbatim passage or most of the amendment <span class="pill t-partial">partial</span> a shorter shared passage <span class="pill ord-opinion_first">opinion came first</span> <span class="pill ord-unclear">order unclear</span>`);
+  $("pplLegend").innerHTML = `<span>${chipEx(`<span class="dot"></span>${T("име","name")}`)} ${T("в текстов отпечатък","in a text footprint")}</span><span>${chipEx(`${T("име","name")} <span class="n">12</span>`)} ${T("законопроекти + предложения","bills + amendments")}</span><span>${chipEx(`${T("име","name")} <span class="n">◆5</span>`)} ${T("свързани фирми (ЩРАК)","linked companies (ShTRAK)")}</span>`;
+  $("flowLegend").innerHTML = `<span><span class="pill" style="background:var(--ok);color:#fff">${OUT.supported}</span></span><span><span class="pill" style="background:color-mix(in srgb,var(--ok) 55%,var(--surface))">${T("по принцип","in principle")}</span></span><span><span class="pill" style="background:var(--bad);color:#fff">${OUT.rejected}</span></span><span><span class="pill" style="background:var(--warn);color:#fff">${OUT.inadmissible_out_of_scope}</span></span><span><span class="pill" style="background:color-mix(in srgb,var(--muted) 45%,var(--surface))">${T("оттеглено / неясно","withdrawn / unclear")}</span></span>`;
+  $("kindLegend").innerHTML = ["reworded","new","deleted","unchanged"].map(k=>`<span><span class="pill kp-${k}">${KIND[k]}</span></span>`).join("") + `<span><span class="pill" style="box-shadow:0 0 0 2px var(--inf)">${T("текст от становище","text from an opinion")}</span></span>`;
+}
+
+// ---------- render everything for current filters
+function render(){
+  const fps = D.fp.filter(fpOk), strong = fps.filter(f=>f.tier==="strong"), partial = fps.filter(f=>f.tier!=="strong");
+  const sg = SIG.filter(sigOk);
+  const mpIds = Object.keys(MP).filter(mpOk);
+  const orgs = D.orgs.map((o,i)=>[o,i]).filter(([o])=>orgOk(o));
+  const laws = D.laws.filter(lawOk);
+  const props = laws.flatMap(l=>l.props.filter(p=>propInParty(p,l.ns)));
+  fillParty(); fillLaw();
+  const nsView = F.ns || (F.party ? pparse(F.party)[0] : D.asm[0].ns);
+  const accN = props.filter(p=>OK.has(p.o)).length;
+
+  // overview bento
+  const grpRows = D.groups.filter(g=>g.ns===nsView).map(g=>({g:g.g, n:g.ids.filter(mpOk).length})).filter(r=>r.n);
+  const maxG = Math.max(1,...grpRows.map(r=>r.n));
+  const typeRows = OTYPE.map(([t])=>({s:SHORT[t], n:orgs.filter(([o])=>o.t===t).length})).filter(r=>r.n);
+  const maxT = Math.max(1,...typeRows.map(r=>r.n));
+  const pick = (strong.length?strong:fps).filter((f,i,a)=>a.findIndex(g=>g.org===f.org&&g.law===f.law)===i).slice(0,3);
+  $("bento").innerHTML = `
+   <button class="b b-inf" data-sec="influence" data-go="influence">
+     <span class="k"><i></i>${T("Влияние","Influence")}</span>
+     <span><span class="big">${strong.length}</span><br><span class="lbl">${T(`${pl(strong.length,"силен текстов отпечатък","силни текстови отпечатъка")}, общо ${fps.length}`,`strong text ${pl(strong.length,"footprint","footprints")}, ${fps.length} in all`)}</span></span>
+     ${pick.length?`<span style="display:grid;gap:10px">${pick.map(f=>`<span class="preview"><span><b>${esc(f.org)}</b> → ${esc(f.ids.length?shortName(MP[f.ids[0]].n):nm(f.who[0]||""))}</span><q lang="bg">${esc(f.pas.slice(0,140))}</q><span class="small muted">${T(`${f.w} думи дословно`,`${f.w} words verbatim`)} · <span lang="bg">${esc(shortLaw(LAW[f.law].t).slice(0,60))}</span></span></span>`).join("")}</span>`:`<span class="lbl">${T("Няма отпечатъци за този филтър.","No footprints for this filter.")}</span>`}
+     <span class="go">${T("Към Влияние","To Influence")}</span>
+   </button>
+   <button class="b b-ppl" data-sec="people" data-go="people">
+     <span class="k"><i></i>${T("Депутати","MPs")}</span>
+     <span><span class="big">${mpIds.length}</span> <span class="lbl">${T(`депутати · ${mpIds.filter(biz).length} с връзки с фирми`,`MPs · ${mpIds.filter(biz).length} with company ties`)}</span></span>
+     <span class="small">${T(`Групи в ${NSO[nsView]} Народно събрание`,`Groups in the ${NSO[nsView]} National Assembly`)}</span>
+     <span class="bars">${grpRows.map(r=>`<span class="bar"><span>${esc(gn(r.g))}</span><span class="v">${r.n}</span><span class="track"><b style="width:${(r.n/maxG*100).toFixed(1)}%"></b></span></span>`).join("")}</span>
+     <span class="go">${T("По парламентарни групи","By parliamentary group")}</span>
+   </button>
+   <button class="b b-org" data-sec="orgs" data-go="orgs">
+     <span class="k"><i></i>${T("Организации","Organisations")}</span>
+     <span><span class="big">${orgs.length}</span><br><span class="lbl">${T("подадоха писмени становища","filed written opinions")}</span></span>
+     <span class="bars">${typeRows.map(r=>`<span class="bar"><span>${esc(r.s)}</span><span class="v">${r.n}</span><span class="track"><b style="width:${(r.n/maxT*100).toFixed(1)}%"></b></span></span>`).join("")}</span>
+     <span class="go">${T("По вид","By type")}</span>
+   </button>
+   <button class="b b-law" data-sec="laws" data-go="laws">
+     <span class="k"><i></i>${T("Закони","Laws")}</span>
+     <span><span class="big">${laws.length}</span><br><span class="lbl">${T(`обнародвани · приети ${pct(accN,props.length)}% от ${fmt(props.length)} предложения`,`promulgated · ${pct(accN,props.length)}% of ${fmt(props.length)} amendments accepted`)}</span></span>
+     <ul class="mini-list" lang="bg">${laws.slice(0,3).map(l=>`<li>${esc(shortLaw(l.t))}</li>`).join("")}</ul>
+     <span class="go">${T("Всички закони","All laws")}</span>
+   </button>
+   <button class="b b-sig" data-sec="influence" data-go="influence" style="--t:var(--surface);--i:var(--ink)">
+     <span class="k"><i></i>${T("Други сигнали","Other signals")}</span>
+     <span><span class="big" style="font-size:clamp(28px,3.4vw,40px)">${sg.length}</span> <span class="lbl">${T(`${pl(sg.length,"модел, който заслужава","модела, които заслужават")} втори прочит`,`${pl(sg.length,"pattern","patterns")} worth a second look`)}</span></span>
+     <ul class="mini-list">${sg.slice(0,3).map(g=>`<li>${g.t}</li>`).join("")}</ul>
+     <span class="go">${T("Към сигналите","To the signals")}</span>
+   </button>
+   <button class="b b-lnk" data-sec="links" data-go="links">
+     <span class="k"><i></i>${T("Връзки","Connections")}</span>
+     <span><span class="big">${CO.filter(c=>c.m.filter(i=>mpOk(String(i))).length>1 && c.t!=="state").length}</span> <span class="lbl">${T("фирми и организации, общи за двама или повече депутати","companies and organisations shared by two or more MPs")}</span></span>
+     <span class="small">${T(`${mpIds.filter(id=>(MP[id].co||[]).length).length} от ${mpIds.length} депутати имат роли във фирми или организации по Търговския регистър.`,`${mpIds.filter(id=>(MP[id].co||[]).length).length} of ${mpIds.length} MPs hold roles in companies or organisations in the Commercial Register.`)}</span>
+     <span class="go">${T("Към мрежата","To the network")}</span>
+   </button>
+   <button class="b b-how" data-sec="method" data-go="method">
+     <span class="k"><i></i>${T("Как да четете","How to read this")}</span>
+     <span class="small">${T("Всеки закон е проследен от Държавен вестник до законопроекта на parliament.bg: кой го е внесъл, кой е предложил промени и какво е прието, кои организации са изпратили становища и къде е попаднал текстът им. С филтрите горе можете да ограничите всичко до едно Народно събрание, група, закон или вид организация.",
+       "Every law is traced from the State Gazette to its bill on parliament.bg: who filed it, who proposed changes and what passed, which organisations sent opinions and where their text ended up. The filters at the top narrow everything to one National Assembly, group, law or organisation type.")}</span>
+     <span class="small">${T(`Съпоставянето е автоматично. При ${fmt(D.stats.m.unclear_pct)}% от предложенията решението е неясно, а отпечатъците са следи, не доказателства.`,`The matching is automatic. For ${fmt(D.stats.m.unclear_pct)}% of amendments the outcome is unclear, and footprints are leads, not proof.`)}</span>
+     <span class="go">${T("Как работи и ограничения","How it works and its limits")}</span>
+   </button>`;
+
+  // influence
+  $("infNums").innerHTML = `<div><b>${strong.length}</b><span>${T("силни отпечатъци","strong footprints")}</span></div><div><b>${partial.length}</b><span>${T("частични","partial")}</span></div><div><b>${sg.length}</b><span>${T("други сигнали","other signals")}</span></div><div><b>${fmt(D.stats.readable)}</b><span>${T("прочетени становища","opinions read")}</span></div>`;
+  $("cFp").textContent = count(strong.length, D.fp.filter(f=>f.tier==="strong").length);
+  $("fps").innerHTML = strong.map(fpCard).join("") || `<p class="empty">${T("Няма силни отпечатъци за този филтър.","No strong footprints for this filter.")}</p>`;
+  $("cFpP").textContent = count(partial.length, D.fp.filter(f=>f.tier!=="strong").length);
+  $("fpsMore").innerHTML = partial.map(fpCard).join("") || `<p class="empty">${T("Няма за този филтър.","None for this filter.")}</p>`;
+  $("cSig").textContent = count(sg.length, SIG.length);
+  $("signals").innerHTML = sg.map(sigTile).join("") || `<p class="empty">${T("Няма сигнали за този филтър.","No signals for this filter.")}</p>`;
+
+  // people
+  $("pplNums").innerHTML = `<div><b>${mpIds.length}</b><span>${T("показани депутати","MPs shown")}</span></div><div><b>${mpIds.filter(id=>MP[id].fp.length).length}</b><span>${T("в отпечатък","in a footprint")}</span></div><div><b>${mpIds.filter(biz).length}</b><span>${T("с връзки с фирми","with company ties")}</span></div>`;
+  $("pplAsm").innerHTML = D.asm.map(a=>`<button data-setns="${a.ns}" aria-pressed="${a.ns===nsView}">${NSO[a.ns]} · ${yrs(a)}</button>`).join("");
+  $("groups").innerHTML = D.groups.filter(g=>g.ns===nsView).map(g=>{ const ids=g.ids.filter(mpOk); if(!ids.length) return "";
+    return `<div class="tile tinted" data-sec="people"><header><h3>${esc(gn(g.g))}</h3><span class="stat">${T(`${count(ids.length,g.ids.length)} депутати · приети ${pct(g.na,g.np)}% от ${g.np} предложения`,`${count(ids.length,g.ids.length)} MPs · ${pct(g.na,g.np)}% of ${g.np} amendments accepted`)}</span></header>
+    <div class="chips">${ids.map(id=>{const m=MP[id],a=activity(id);return `<button class="chip${a?"":" quiet"}" data-mp="${id}">${m.fp.length?`<span class="dot" title="${T("В текстов отпечатък","In a text footprint")}"></span>`:""}${esc(shortName(m.n))}${a?`<span class="n">${a}</span>`:""}${biz(id)?`<span class="n" title="${T("Свързани фирми","Linked companies")}">◆${m.sh.f}</span>`:""}</button>`}).join("")}</div></div>`}).join("") || `<p class="empty">${T("Няма депутати, които отговарят на филтрите.","No MPs match the filters.")}</p>`;
+
+  // orgs
+  $("orgNums").innerHTML = `<div><b>${orgs.length}</b><span>${T("организации","organisations")}</span></div><div><b>${orgs.filter(([o])=>o.fp.length).length}</b><span>${T("с текст в предложение","with text in an amendment")}</span></div><div><b>${orgs.filter(([o])=>o.t==="business").length}</b><span>${T("бизнес","business")}</span></div>`;
+  $("orgGroups").innerHTML = OTYPE.map(([t,label])=>{const os=orgs.filter(([o])=>o.t===t); if(!os.length) return "";
+    return `<div class="tile tinted" data-sec="orgs"><header><h3>${label}</h3><span class="stat">${os.length}</span></header><div class="chips" lang="bg">${os.map(([o,i])=>{const n=new Set(o.filings.map(f=>f.law)).size;return `<button class="chip" data-org="${i}">${o.fp.length?`<span class="dot" title="${T("Текстът е открит в предложение","Text found in an amendment")}"></span>`:""}${esc(o.n)}<span class="n">${n}</span></button>`}).join("")}</div></div>`}).join("") || `<p class="empty">${T("Няма организации, които отговарят на филтрите.","No organisations match the filters.")}</p>`;
+
+  // laws
+  $("lawNums").innerHTML = `<div><b>${laws.length}</b><span>${T("закони","laws")}</span></div><div><b>${fmt(props.length)}</b><span>${T("предложения","amendments")}${F.party?T(" от "," by ")+esc(gn(pparse(F.party)[1])):""}</span></div><div><b>${pct(accN,props.length)}%</b><span>${T("приети","accepted")}</span></div><div><b>${laws.filter(l=>hasFp.has(l.id)).length}</b><span>${T("с отпечатък","with a footprint")}</span></div>`;
+  $("lawAsm").innerHTML = `<button data-setns="" aria-pressed="${!F.ns}">${T("Всички","All")}</button>` + D.asm.map(a=>`<button data-setns="${a.ns}" aria-pressed="${a.ns===F.ns}">${NSO[a.ns]} · ${a.laws}</button>`).join("");
+  $("ledger").innerHTML = D.asm.map(a=>{ const ls = laws.filter(l=>l.ns===a.ns); if(!ls.length) return "";
+    const open = F.ns || openAsm.has(a.ns), shown = open ? ls : ls.slice(0,9);
+    return `<div class="asmhead"><h2>${nsLong(a.ns)}</h2><span>${yrs(a)} · ${ls.length} ${T(pl(ls.length,"закон","закона"),pl(ls.length,"law","laws"))}</span></div><div class="grid">${shown.map(lawTile).join("")}</div>${shown.length<ls.length?`<button class="morebtn" data-openasm="${a.ns}">${T(`Покажи всички ${ls.length}`,`Show all ${ls.length}`)}</button>`:""}`; }).join("") || `<p class="empty">${T("Няма закони, които отговарят на филтрите.","No laws match the filters.")}</p>`;
+
+  $("lnkAsm").innerHTML = D.asm.map(a=>`<button data-setns="${a.ns}" aria-pressed="${a.ns===nsView}">${NSO[a.ns]} · ${yrs(a)}</button>`).join("");
+  if (current==="links") renderLinks();
+  // filter UI
+  for (const [el,v] of [[fNs,F.ns],[fParty,F.party],[fType,F.type],[fLaw,F.law],[fSig,F.sig]]) { el.value=v; el.classList.toggle("set", !!v); }
+  fClear.hidden = !(F.ns||F.party||F.type||F.law||F.sig);
+}
+function footer(){ const s = D.stats;
+  $("foot").textContent = T(`Събрани са ${fmt(s.opinions)} становища, ${fmt(s.readable)} с четим текст. ${fmt(s.resolved)} от ${fmt(s.props)} предложения са свързани с депутат; ${s.sh} депутати са открити в ЩРАК. Съпоставянето е автоматично: прочетете източника, преди да разчитате на който и да е елемент. Данните са обновени на ${dt(s.m.updated)}.`,
+    `${fmt(s.opinions)} opinions collected, ${fmt(s.readable)} with readable text. ${fmt(s.resolved)} of ${fmt(s.props)} amendments are linked to an MP; ${s.sh} MPs were found in ShTRAK. The matching is automatic: read the source before relying on any item. Data updated ${dt(s.m.updated)}. People and group names are transliterated; law titles, organisation names and quoted texts are in the original Bulgarian.`); }
+
+// ---------- "how it works"
+function renderMethod(){
+  const s = D.stats, m = s.m, n = fmt;
+  const src = [
+    [T("Държавен вестник","State Gazette (Държавен вестник)"), T("Текстът на всеки обнародван закон и броят, в който е публикуван.","The text of every promulgated law and the issue it was published in."), "https://dv.parliament.bg/DVWeb/index.faces", "dv.parliament.bg"],
+    [T("Законопроекти","Bills"), T("Вносители, комисии, движение и докладите за първо и второ гласуване.","Sponsors, committees, the bill's progress and the reports for the first and second vote."), "https://www.parliament.bg/bg/bills", "parliament.bg"],
+    [T("Становища","Opinions"), T("Писмените становища на организации, публикувани към всеки законопроект. Сканираните са разчетени с OCR (автоматично разпознаване на текст).","The written opinions organisations sent on each bill, as published with it. Scanned ones are read with OCR (automatic text recognition)."), "https://www.parliament.bg/bg/bills", "parliament.bg"],
+    [T("Депутати","MPs"), T("Профилите на депутатите и парламентарните групи във всяко Народно събрание, с датите на членство.","MP profiles and parliamentary groups in each National Assembly, with membership dates."), "https://www.parliament.bg/bg/MP", "parliament.bg"],
+    [T("ЩРАК (BIRD.BG)","ShTRAK (ЩРАК) by BIRD.BG"), T("Връзки на лица с фирми и организации по данни от Търговския регистър.","People's ties to companies and organisations, from Commercial Register data."), "https://shtrack.net/?bird_lang=bg", "shtrack.net"],
+  ];
+  const steps = [
+    [T("Законите","Laws"),
+     T(`Всеки закон, обнародван в Държавен вестник от ${dt(m.from)} насам, се свързва със своя законопроект по заглавие и дата. Обхванати са ${m.asm} народни събрания, от 47-мо до 52-ро.`,`Every law promulgated in the State Gazette since ${dt(m.from)} is linked to its bill by title and date. ${m.asm} National Assemblies are covered, the 47th to the 52nd.`),
+     T(`${n(s.laws)} закона. При ${m.no_gazette} законопроектът е открит, но броят на ДВ не е съпоставен автоматично; за тях показваме данните от parliament.bg без връзка към ДВ.`,`${n(s.laws)} laws. For ${m.no_gazette} the bill was found but the gazette issue was not matched automatically; for these we show the parliament.bg data without a gazette link.`)],
+    [T("Предложенията и решенията","Amendments and outcomes"),
+     T("Между първо и второ гласуване депутатите внасят предложения. Докладът на комисията за второ гласуване изброява всяко предложение, авторите му и решението: подкрепя, подкрепя по принцип, не подкрепя, оттеглено. Разчитаме доклада автоматично и свързваме авторите с депутатите от същото Народно събрание.",
+       "Between the first and second vote, MPs file amendments. The committee's second-reading report lists every amendment, its authors and the decision: supported, supported in principle, not supported, withdrawn. We read the report automatically and link the authors to the MPs of the same National Assembly."),
+     T(`${n(m.resolved_pct)}% от ${n(s.props)} предложения са свързани с конкретен депутат; останалите са показани с името, както е в доклада. При ${n(m.unclear_pct)}% решението не е разчетено и е отбелязано „неясно“. ${m.no_report} закона нямат доклад за второ гласуване; ${m.no_report_ratif} от тях са ратификации на международни договори.`,
+       `${n(m.resolved_pct)}% of ${n(s.props)} amendments are linked to a specific MP; the rest show the name as written in the report. For ${n(m.unclear_pct)}% the decision could not be read and is marked "unclear". ${m.no_report} laws have no second-reading report; ${m.no_report_ratif} of them are ratifications of international treaties.`)],
+    [T("Становищата","Opinions"),
+     T("Изтегляме всяко становище, публикувано към законопроекта. Сканираните документи разчитаме с OCR, което понякога греши в отделни букви и думи. Организациите са групирани по вид: бизнес, синдикати, професионални организации, държавни институции и граждански организации.",
+       "We download every opinion published with the bill. Scanned documents are read with OCR, which sometimes gets single letters or words wrong. Organisations are grouped by type: business, unions, professional bodies, state institutions and civil society."),
+     T(`${n(m.readable_pct)}% от ${n(s.opinions)} становища имат четим текст. ${n(s.orgs)} организации след обединяване на различните изписвания на едно име.`,`${n(m.readable_pct)}% of ${n(s.opinions)} opinions have readable text. ${n(s.orgs)} organisations after merging different spellings of one name.`)],
+    [T("Текстови отпечатъци","Text footprints"),
+     T("Сравняваме текста на всяко предложение с всяко становище по същия законопроект. Отпечатък има, когато поне 12 поредни думи съвпадат дословно. Текстът, който вече е в законопроекта, се изключва, защото и двете страни често го цитират. „Силен“ е отпечатък от поне 40 думи или от поне 20 думи, които са поне 40% от предложението.",
+       "We compare the text of every amendment with every opinion on the same bill. There is a footprint when at least 12 consecutive words match verbatim. Text already in the bill is excluded, because both sides often quote it. A footprint is \"strong\" at 40 words or more, or at 20 words or more that make up at least 40% of the amendment."),
+     T(`${s.fp} отпечатъка, ${s.fp_strong} силни. При ${m.fp_first} от силните становището е подадено преди първо четене, т.е. преди предложението да е могло да бъде внесено. При останалите редът е неясен: организацията може да е цитирала депутата или и двамата да са ползвали трети източник.`,
+       `${s.fp} footprints, ${s.fp_strong} strong. In ${m.fp_first} of the strong ones the opinion was filed before the first reading, i.e. before the amendment could have been filed. For the rest the order is unclear: the organisation may have quoted the MP, or both may have used a third source.`)],
+    [T("Преди и след","Before and after"),
+     T("За всеки параграф сравняваме текста на вносителя с окончателната редакция на комисията дума по дума. После проверяваме дали окончателната редакция е в обнародвания закон.",
+       "For every paragraph we compare the sponsor's text with the committee's final wording, word by word. Then we check whether the final wording is in the promulgated law."),
+     T(`${n(m.dv_pct)}% от ${n(m.dv_checked)} проверени редакции са открити дословно в Държавен вестник. Останалите най-често са променени в пленарната зала или преномерирани. За ${m.no_before} променени параграфа не успяхме да извлечем първоначалния текст.`,
+       `${n(m.dv_pct)}% of ${n(m.dv_checked)} checked edits were found verbatim in the State Gazette. The rest were most often changed on the floor or renumbered. For ${m.no_before} changed paragraphs we could not extract the original text.`)],
+    [T("Депутатите и групите","MPs and groups"),
+     T("Всеки депутат е показан с групата, в която е бил във всяко Народно събрание. parliament.bg дава нов номер при всеки мандат, затова обединяваме мандатите на един човек по пълно име и дата на раждане.",
+       "Every MP is shown with the group they belonged to in each National Assembly. parliament.bg gives a new id for every mandate, so we merge one person's mandates by full name and date of birth."),
+     T(`${n(m.mandates)} мандата, ${n(m.people)} души.`,`${n(m.mandates)} mandates, ${n(m.people)} people.`)],
+    [T("Връзки с фирми","Company ties"),
+     T("Търсим всеки депутат в ЩРАК по пълното име. Ако ЩРАК сам го отбелязва като народен представител, съвпадението е потвърдено. Ако в регистъра има точно едно лице с това име, приемаме го като съвпадение само по име и го показваме с пунктир. После изтегляме ролите му: собственик, съдружник, управител, член на съвет, настоящи и минали. Самото Народно събрание, партиите, личните регистрации и държавните длъжности не се броят.",
+       "We search ShTRAK for every MP by full name. If ShTRAK itself tags the person as a Member of Parliament, the match is confirmed. If the register has exactly one person with that name, we accept it as a name-only match and draw it dashed. We then download their roles: owner, partner, manager, board member, current and past. The parliament itself, parties, personal registrations and state posts are not counted."),
+     T(`${n(m.people)} депутати: ${(m.shl.matched||0)+(m.shl.ambiguous||0)} потвърдени, ${m.shl.name_only||0} само по име, ${m.shl.namesakes||0} с няколко души със същото име (неразграничими), ${m.shl.none||0} без запис в регистъра. ${n(m.co)} фирми и организации, ${m.co_shared} общи за двама или повече депутати. Да имаш фирма не е нарушение; връзката е интересна, когато фирмата е в сектора, който законът засяга.`,
+       `${n(m.people)} MPs: ${(m.shl.matched||0)+(m.shl.ambiguous||0)} confirmed, ${m.shl.name_only||0} name match only, ${m.shl.namesakes||0} with several people of the same name (cannot be told apart), ${m.shl.none||0} with no register record. ${n(m.co)} companies and organisations, ${m.co_shared} shared by two or more MPs. Owning a company is not wrongdoing; a tie matters when the company is in the sector the law affects.`)],
+    [T("Други сигнали","Other signals"),
+     T("Късни промени в други закони: текст в преходните и заключителните разпоредби, който го няма в първоначалния законопроект и е добавен на второ четене. Недопустими предложения: комисията ги е отбелязала като извън обхвата на законопроекта. Еднакъв текст от различни групи: две предложения по един закон, почти дума по дума.",
+       "Late changes to other laws: text in the transitional and final provisions that was not in the bill as filed and was added at second reading. Inadmissible amendments: the committee marked them as outside the bill's scope. Same text from different groups: two amendments to one law, almost word for word."),
+     T(`${n(s.other)} промени в други закони чрез ПЗР; ${m.inadm} недопустими предложения; ${D.echo.length} двойки еднакви предложения от различни групи.`,`${n(s.other)} changes to other laws through transitional and final provisions; ${m.inadm} inadmissible amendments; ${D.echo.length} pairs of matching amendments from different groups.`)],
+  ];
+  const lims = [
+    [`${n(m.unclear_pct)}%`, T("от решенията по предложенията не са разчетени автоматично и са отбелязани „неясно“.","of amendment outcomes could not be read automatically and are marked \"unclear\".")],
+    [`${n(Math.round((100-m.resolved_pct)*10)/10)}%`, T("от предложенията не са свързани с конкретен депутат; показано е името от доклада.","of amendments are not linked to a specific MP; the name from the report is shown.")],
+    [`${n(Math.round((100-m.dv_pct)*10)/10)}%`, T("от окончателните редакции на комисиите не са открити дословно в Държавен вестник.","of the committees' final wordings were not found verbatim in the State Gazette.")],
+    [`${m.no_gazette}`, T("закона нямат автоматична връзка към броя на Държавен вестник.","laws have no automatic link to their State Gazette issue.")],
+    [`${n(Math.round((100-m.sh_pct)*10)/10)}%`, T("от депутатите нямат потвърдено или вероятно съвпадение в ЩРАК; за тях не показваме връзки с фирми, което не значи, че нямат.","of MPs have no confirmed or likely match in ShTRAK; we show no company ties for them, which does not mean they have none.")],
+    [`${(m.shl.name_only||0)}`, T("депутати са свързани с регистъра само по име. Много вероятно е същият човек, но съвпадението не е потвърдено.","MPs are linked to the register by name only. Very likely the same person, but the match is not confirmed.")],
+    ["OCR", T("Грешките при разчитане на сканирани документи могат да скрият отпечатък или да го скъсят.","Errors in reading scanned documents can hide a footprint or make it shorter.")],
+  ];
+  $("v-method").innerHTML = `
+  <div class="hero"><p class="kick"><i></i>${T("Как работи","How it works")}</p><h1 id="h-how">${T("Как работи Law Trail","How Law Trail works")}</h1>
+   <p>${T("Law Trail събира публични документи от Държавен вестник и parliament.bg и ги свързва автоматично. Тук е описана всяка стъпка, какво може да се обърка и колко често. Числата се преизчисляват при всяко обновяване на данните.",
+     "Law Trail collects public documents from the State Gazette and parliament.bg and links them automatically. This page describes every step, what can go wrong and how often. The numbers are recalculated every time the data is updated.")}</p>
+   ${LANG==="en"?`<p class="how">People and parliamentary group names are transliterated. Law titles, organisation names, committee names and quoted texts stay in the original Bulgarian, as published.</p>`:""}
+   <div class="nums"><div><b>${n(s.laws)}</b><span>${T("закона","laws")}</span></div><div><b>${n(s.props)}</b><span>${T("предложения","amendments")}</span></div><div><b>${n(s.opinions)}</b><span>${T("становища","opinions")}</span></div><div><b>${n(m.people)}</b><span>${T("депутати","MPs")}</span></div><div><b>${dt(m.updated)}</b><span>${T("последно обновяване","last updated")}</span></div></div></div>
+
+  <div class="notbox"><h2>${T("Сигналът е следа, а не доказателство","A signal is a lead, not proof")}</h2>
+   <p>${T("Всичко тук е открито автоматично. Отпечатък или сигнал казва „прочетете тези два документа един до друг“. Не казва, че някой е нарушил закона или е бил платен.",
+     "Everything here was found automatically. A footprint or signal says \"read these two documents side by side\". It does not say that anyone broke the law or was paid.")}</p>
+   <ul>
+    <li>${T("Министерствата и агенциите често пишат текстове, които депутатите внасят. Практиката е обичайна, макар и непрозрачна.","Ministries and agencies often draft texts that MPs then file. The practice is common, if opaque.")}</li>
+    <li>${T("Организациите имат право да изпращат становища, а комисиите често ги искат.","Organisations have the right to send opinions, and committees often ask for them.")}</li>
+    <li>${T("Депутатът може да е съгласен с една организация по убеждение, без какъвто и да е личен интерес.","An MP may agree with an organisation out of conviction, with no personal interest at all.")}</li>
+    <li>${T("Липсата на отпечатък не значи липса на влияние. Срещи, разговори и текстове, предадени неофициално, не оставят следа в документите.","No footprint does not mean no influence. Meetings, calls and texts passed on informally leave no trace in the documents.")}</li>
+    <li>${T("В България няма регистър на лобистите и задължение да се разкрива кой е написал даден текст. Law Trail показва видимата част; изводите изискват журналистическа проверка и право на отговор.","Bulgaria has no lobbying register and no duty to disclose who wrote a text. Law Trail shows the visible part; conclusions need journalistic verification and a right of reply.")}</li>
+   </ul></div>
+
+  <div class="panel2"><h2>${T("Откъде идват данните","Where the data comes from")}</h2><p class="lead">${T("Само официални и публични източници. Всеки елемент в Law Trail води до документа, от който е извлечен.","Official, public sources only. Every item in Law Trail links to the document it was taken from.")}</p>
+   <ul class="srcs">${src.map(([h,d,u,l])=>`<li><b>${h}</b><span class="muted">${d}</span><a href="${u}" target="_blank" rel="noopener">${l} ↗</a></li>`).join("")}</ul></div>
+
+  <div class="subhead"><h2>${T("Стъпка по стъпка","Step by step")}</h2><p>${T("Какво прави програмата и колко точно се получава. Оцветеното поле под всяка стъпка е измерената точност.","What the software does and how accurate the result is. The shaded box under each step is the measured accuracy.")}</p></div>
+  <div class="msteps">${steps.map(([h,p,a])=>`<div class="mstep"><h3>${h}</h3><p>${p}</p><p class="acc">${a}</p></div>`).join("")}</div>
+
+  <div class="panel2"><h2>${T("Ограничения","Limits")}</h2><p class="lead">${T("Съпоставянето е автоматично и никой не е проверил ръчно всеки ред. Ето къде знаем, че има празноти.","The matching is automatic and nobody has checked every row by hand. These are the gaps we know about.")}</p>
+   <ul class="lims">${lims.map(([b,t])=>`<li><b>${b}</b><span>${t}</span></li>`).join("")}</ul>
+   <p class="enote">${T(`Обхватът започва на ${dt(m.from)}. Законопроекти, които още не са обнародвани, не се показват като закони.`,`Coverage starts on ${dt(m.from)}. Bills not yet promulgated are not shown as laws.`)}</p></div>
+
+  <div class="panel2"><h2>${T("Корекции и право на отговор","Corrections and right of reply")}</h2>
+   <p style="margin:0;max-width:72ch">${m.contact
+     ? T(`Ако сте споменати тук и смятате, че данните са грешни или непълни, или ако откриете грешка, пишете на <a href="mailto:${esc(m.contact)}">${esc(m.contact)}</a>. Поправяме грешките при следващото обновяване.`,`If you are named here and believe the data is wrong or incomplete, or if you find an error, write to <a href="mailto:${esc(m.contact)}">${esc(m.contact)}</a>. Errors are fixed in the next update.`)
+     : T("Всяка карта води до първоизточника. Ако видите разлика между Law Trail и документа, документът е верният.","Every card links to its primary source. If Law Trail and the document disagree, the document is right.")}</p>
+   <p class="enote">${T(`Данните са обновени на ${dt(m.updated)}.`,`Data updated ${dt(m.updated)}.`)}</p></div>`;
+}
+
+// ---------- connections: MPs and register entities (ЩРАК / Commercial Register)
+const CO = D.co || [];
+const CTYPE = {bg:{biz:"Фирма",ngo:"Сдружение / фондация",state:"Държавна институция"}, en:{biz:"Company",ngo:"Association / foundation",state:"State body"}};
+const SHL = {
+  bg:{matched:"потвърдено от ЩРАК",ambiguous:"потвърдено, с двойник",name_only:"само по име",namesakes:"няколко души с това име",none:"няма в регистъра",nodata:"няма данни"},
+  en:{matched:"confirmed by ShTRAK",ambiguous:"confirmed, with a namesake",name_only:"name match only",namesakes:"several people with this name",none:"not in the register",nodata:"no data"}};
+const ROLE_EN = [[/Собственик — архивен/i,"owner (archive record)"],[/архивен формат/i,"management (archive record)"],[/Приобретател/i,"acquirer (new owner)"],[/Действителн/i,"beneficial owner"],[/офшорни/i,"representative of an offshore company"],[/Довереник/i,"trustee"],[/Запор/i,"distraint"],[/Лице за контакт/i,"contact person"],[/Настоятелство/i,"board of trustees"],[/Прехвърлител/i,"transferor (former owner)"],[/Едноличен собственик/i,"sole owner"],[/Съдружни/i,"partner"],[/Акционер/i,"shareholder"],[/Управител/i,"manager"],[/Съвет на директорите/i,"board of directors"],[/Управителен съвет/i,"management board"],[/Надзорен съвет/i,"supervisory board"],[/Председател/i,"chair"],[/Прокурист/i,"procurator"],[/Ликвидатор/i,"liquidator"],[/Представител|представляващ/i,"representative"],[/Член/i,"member"],[/Учредител/i,"founder"],[/Свързано лице/i,"related party"],[/Действителен собственик/i,"beneficial owner"],[/Едноличен търговец|Физическо лице - търговец/i,"sole trader"]];
+const roleTxt = r => { if (LANG!=="en" || !r) return esc(r); const out = r.split("; ").map(x=>{ const hit = ROLE_EN.find(([re])=>re.test(x)); return hit ? hit[1] : x; }); return esc([...new Set(out)].join("; ")); };
+const coName = c => LANG==="en" && c.l ? c.l : c.n;
+const coLink = k => CO[k] ? `<button class="linkbtn ent-co" data-co="${k}"${LANG==="en"&&CO[k].l?"":` lang="bg"`}>${esc(coName(CO[k]))}</button>` : "";
+const shLevel = m => (m.sh && m.sh.s) || "nodata";
+const shOk = m => ["matched","ambiguous","name_only"].includes(shLevel(m));
+const lastGroup = (m, ns) => m.as[ns] || m.as[Object.keys(m.as).sort().pop()];
+// party colour keys (stable across assemblies)
+const PKEY = g => /ГЕРБ/.test(g)?"gerb":/Демократична Б|ПП ?[–-] ?ДБ|Промяната-Дем/.test(g)?"ppdb":/Продължаваме/.test(g)?"pp":/^ДПС – Ново|^ДПС$/.test(g)?"dps":/Алианс/.test(g)?"aps":/ВЪЗРАЖДАНЕ/i.test(g)?"vaz":/БСП/.test(g)?"bsp":/ИТН|Има Такъв/i.test(g)?"itn":/ВЕЛИЧИЕ/i.test(g)?"vel":/МЕЧ/.test(g)?"mech":/възход/.test(g)?"bv":/Прогресивна/.test(g)?"pb":"ind";
+const PCOL = {gerb:"#2f6fdb",pp:"#e0a31a",ppdb:"#d4791c",dps:"#7a52c7",aps:"#a66fd9",vaz:"#1f9e89",bsp:"#d6403a",itn:"#3fa7d6",vel:"#8a6d3b",mech:"#c2549b",bv:"#5a8f3a",pb:"#b5651d",ind:"#8a909c"};
+const COCOL = {biz:"var(--org)",ngo:"var(--lnk)",state:"var(--muted)"};
+
+const LM = {focus:null, all:false};   // focus: {mp:id} | {co:k}
+let d3p = null;
+const loadD3 = () => d3p ||= new Promise((res, rej)=>{ const s=document.createElement("script"); s.src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"; s.onload=()=>res(window.d3); s.onerror=()=>{ d3p=null; rej(new Error("d3")); }; document.head.appendChild(s); });
+
+// sub-graph builders -> {nodes, links}
+function graphFor(mpIds, opt){
+  const nodes = new Map(), links = [];
+  const addMp = id => { const m=MP[id]; if (!nodes.has("m"+id)) nodes.set("m"+id, {id:"m"+id, kind:"mp", mp:id, label:shortName(m.n), col:PCOL[PKEY(lastGroup(m, opt.ns))], dash:shLevel(m)==="name_only"}); };
+  const addCo = k => { if (!nodes.has("c"+k)) nodes.set("c"+k, {id:"c"+k, kind:"co", co:k, label:coName(CO[k]), col:COCOL[CO[k].t], deg:0}); };
+  for (const id of mpIds){ const m=MP[id]; for (const [k] of (m.co||[])){ if (!opt.keep(k)) continue; addMp(id); addCo(k); links.push({source:"m"+id, target:"c"+k, dash:shLevel(m)==="name_only"}); } }
+  for (const l of links) nodes.get(l.target).deg++;
+  return {nodes:[...nodes.values()], links};
+}
+function sharedIn(ids){ const set = new Set(ids.map(String)); const n = {}; for (const id of set) for (const [k] of (MP[id].co||[])) if (CO[k].t!=="state") n[k]=(n[k]||0)+1; return k => (n[k]||0) >= 2; }
+function linkGraph(mpIds, ns){
+  if (LM.focus?.mp){ const m=MP[LM.focus.mp]; const ks=new Set((m.co||[]).map(([k])=>k)); const others=new Set([LM.focus.mp]); ks.forEach(k=>CO[k].m.forEach(i=>others.add(String(i))));
+    return graphFor([...others], {ns, keep:k=>ks.has(k)}); }
+  if (LM.focus?.co!==undefined && LM.focus?.co!==null){ const c=CO[LM.focus.co]; const ids=c.m.map(String); const keep=sharedIn(ids);
+    return graphFor(ids, {ns, keep:k=>k===LM.focus.co || keep(k)}); }
+  if (LM.all && (F.ns || F.party)) return graphFor(mpIds, {ns, keep:k=>CO[k].t!=="state"});
+  return graphFor(mpIds, {ns, keep:sharedIn(mpIds)});
+}
+function drawNet(el, g, opts={}){
+  if (!g.nodes.length){ el.innerHTML = `<p class="empty">${T("Няма връзки за показване при тези филтри.","No ties to show for these filters.")}</p>`; return; }
+  el.innerHTML = `<p class="loading">${T("Подреждане на мрежата…","Laying out the network…")}</p>`;
+  loadD3().then(d3=>{
+    const W = Math.max(300, el.clientWidth || 800), n = g.nodes.length;
+    const H = opts.h || Math.round(Math.min(820, Math.max(440, 260 + n*2.4)));
+    g.nodes.forEach(d=>{ d.r = d.kind==="mp" ? 6.5 : Math.min(14, 3.5 + d.deg*1.6); });
+    const sim = d3.forceSimulation(g.nodes)
+      .force("link", d3.forceLink(g.links).id(d=>d.id).distance(d=>d.target.deg>1?34:22).strength(.9))
+      .force("charge", d3.forceManyBody().strength(n>300?-30:n>80?-70:-120))
+      .force("x", d3.forceX(W/2).strength(.06)).force("y", d3.forceY(H/2).strength(.09))
+      .force("collide", d3.forceCollide(d=>d.r+2)).stop();
+    for (let i=0; i<320; i++) sim.tick();
+    // fit the layout to the canvas, leaving room on the right for labels
+    const padL = 16, padR = 120, padY = 18;
+    const xs = g.nodes.map(d=>d.x), ys = g.nodes.map(d=>d.y);
+    const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+    const k = Math.min(2.4, (W-padL-padR)/Math.max(1,x1-x0), (H-2*padY)/Math.max(1,y1-y0));
+    const ox = padL + ((W-padL-padR) - (x1-x0)*k)/2, oy = padY + ((H-2*padY) - (y1-y0)*k)/2;
+    g.nodes.forEach(d=>{ d.x = ox + (d.x-x0)*k; d.y = oy + (d.y-y0)*k; });
+    const lab = (d) => d.kind==="mp" ? n <= 120 : d.deg >= (n <= 150 ? 2 : 3);  // keep dense graphs legible; every node has a tooltip
+    const trunc = s => s.length>26 ? s.slice(0,25)+"…" : s;
+    const focusId = LM.focus?.mp ? "m"+LM.focus.mp : (LM.focus?.co!=null ? "c"+LM.focus.co : null);
+    el.innerHTML = `<svg class="net" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${T("Мрежа на връзките между депутати и фирми","Network of ties between MPs and companies")}">
+      <g class="edges">${g.links.map(l=>`<line x1="${l.source.x.toFixed(1)}" y1="${l.source.y.toFixed(1)}" x2="${l.target.x.toFixed(1)}" y2="${l.target.y.toFixed(1)}"${l.dash?' stroke-dasharray="3 3"':""}/>`).join("")}</g>
+      <g class="nodes">${g.nodes.map(d=>`<g class="nd ${d.kind}${d.id===focusId?" focus":""}" ${d.kind==="mp"?`data-mp="${d.mp}"`:`data-co="${d.co}"`} tabindex="0" role="button" aria-label="${esc(d.label)}" transform="translate(${d.x.toFixed(1)},${d.y.toFixed(1)})">
+        ${d.kind==="mp" ? (d.dash ? `<circle r="${d.r-1}" class="dash" fill="var(--surface)" style="stroke:${d.col}"/>` : `<circle r="${d.r}" fill="${d.col}"/>`) : `<rect x="${-d.r}" y="${-d.r}" width="${d.r*2}" height="${d.r*2}" rx="2" fill="${d.col}"/>`}
+        <title>${esc(d.label)}${d.kind==="co"?` · ${d.deg} ${T(pl(d.deg,"депутат","депутати"),pl(d.deg,"MP","MPs"))}`:""}</title>
+        ${lab(d)?`<text x="${d.r+3}" y="3.5"${d.kind==="co"?' class="cl"':""}>${esc(trunc(d.label))}</text>`:""}</g>`).join("")}</g></svg>`;
+  }).catch(()=>{ el.innerHTML = `<p class="empty">${T("Графиката не можа да се зареди. Списъците отдолу съдържат същите връзки.","The graph could not be loaded. The lists below hold the same ties.")}</p>`; });
+}
+
+function renderLinks(){
+  const nsView = F.ns || (F.party ? pparse(F.party)[0] : D.asm[0].ns);
+  const ids = Object.keys(MP).filter(mpOk);
+  const L = SHL[LANG], CT = CTYPE[LANG];
+  // coverage over the MPs in the current filter
+  const lv = {matched:0, ambiguous:0, name_only:0, namesakes:0, none:0, nodata:0}; ids.forEach(id=>lv[shLevel(MP[id])]++);
+  const segs = [["matched", lv.matched+lv.ambiguous, "var(--lnk)"],["name_only", lv.name_only, "color-mix(in srgb,var(--lnk) 45%,var(--surface))"],["namesakes", lv.namesakes, "var(--warn)"],["none", lv.none+lv.nodata, "color-mix(in srgb,var(--muted) 40%,var(--surface))"]];
+  const tot = Math.max(1, ids.length);
+  $("lnkCov").innerHTML = `<div class="covbar" role="img" aria-label="${segs.map(([k,n])=>`${L[k]}: ${n}`).join(", ")}">${segs.map(([k,n,c])=>n?`<span style="width:${(n/tot*100).toFixed(2)}%;background:${c}" title="${L[k]}: ${n}"></span>`:"").join("")}</div>
+    <div class="covleg">${segs.map(([k,n,c])=>`<span><i style="background:${c}"></i><b>${n}</b> ${L[k]} <span class="muted">(${pct(n,tot)}%)</span></span>`).join("")}</div>
+    <p class="small" style="margin:0">${T(`„Само по име“: в регистъра има точно едно лице с това пълно име, но ЩРАК не го отбелязва като депутат. Много вероятно е същият човек, затова тези връзки са показани с пунктир. „Няколко души с това име“ не могат да бъдат разграничени автоматично. „Няма в регистъра“ обикновено значи, че лицето няма роли във фирми под това име.`,
+      `"Name match only": the register has exactly one person with this full name, but ShTRAK does not tag them as an MP. Very likely the same person, so these ties are drawn dashed. "Several people with this name" cannot be told apart automatically. "Not in the register" usually means the person holds no company roles under that name.`)}</p>`;
+  // numbers
+  const withTies = ids.filter(id=>(MP[id].co||[]).length);
+  const ks = new Set(withTies.flatMap(id=>MP[id].co.map(([k])=>k)));
+  const isShared = sharedIn(ids);
+  const shared = [...ks].filter(isShared);
+  const cross = shared.filter(k=>new Set(CO[k].m.filter(i=>ids.includes(String(i))).map(i=>PKEY(lastGroup(MP[i], nsView)))).size>1);
+  $("lnkNums").innerHTML = `<div><b>${withTies.length}</b><span>${T("депутати с връзки","MPs with ties")}</span></div><div><b>${fmt(ks.size)}</b><span>${T("фирми и организации","companies and organisations")}</span></div><div><b>${shared.length}</b><span>${T("общи за 2+ депутати","shared by 2+ MPs")}</span></div><div><b>${cross.length}</b><span>${T("от тях между различни партии","of them across parties")}</span></div>`;
+  // graph controls + title
+  const f = LM.focus;
+  $("lnkCtl").innerHTML = f
+    ? `<span class="small">${f.mp ? T(`Мрежата на ${esc(nm(MP[f.mp].n))}: неговите фирми и другите депутати в тях.`,`${esc(nm(MP[f.mp].n))}'s network: their companies and the other MPs in them.`) : T(`Депутатите в ${esc(coName(CO[f.co]))} и общите им връзки.`,`The MPs in ${esc(coName(CO[f.co]))} and their shared ties.`)}</span><button class="filterlink" data-netclear="1">${T("← Всички общи връзки","← All shared ties")}</button>`
+    : `<label class="toggle"><input type="checkbox" id="lnkAll"${LM.all?" checked":""}${F.ns||F.party?"":" disabled"}> ${T("Покажи всички връзки, не само общите","Show all ties, not only shared ones")}</label>${F.ns||F.party?"":`<span class="small muted">${T("(изберете Народно събрание или група горе)","(pick a National Assembly or group above)")}</span>`}`;
+  const groupsHere = [...new Set(ids.filter(id=>(MP[id].co||[]).length).map(id=>PKEY(lastGroup(MP[id], nsView))))];
+  const gname = {}; ids.forEach(id=>{ const g=lastGroup(MP[id], nsView); gname[PKEY(g)] ||= gn(g); });
+  $("lnkLegend").innerHTML = groupsHere.map(k=>`<span><i style="background:${PCOL[k]};border-radius:50%"></i>${esc(gname[k])}</span>`).join("") +
+    `<span><i style="background:var(--org)"></i>${CT.biz}</span><span><i style="background:var(--lnk)"></i>${CT.ngo}</span><span><i style="border:1.5px dashed var(--muted);background:none;border-radius:50%"></i>${L.name_only}</span>`;
+  drawNet($("lnkNet"), linkGraph(ids, nsView));
+  // shared entities list
+  const rows = shared.map(k=>({k, m:CO[k].m.filter(i=>ids.includes(String(i)))})).sort((a,b)=>(cross.includes(b.k)-cross.includes(a.k)) || b.m.length-a.m.length);
+  $("cShared").textContent = rows.length;
+  $("lnkShared").innerHTML = rows.slice(0, openShared ? 999 : 24).map(({k,m})=>{ const c=CO[k];
+    const role = id => (MP[id].co.find(([kk])=>kk===k)||[])[1]||"";
+    return `<div class="tile lnk-tile" data-sec="links"><header><h3>${coLink(k)}</h3><span class="pill ct-${c.t}">${CT[c.t]}</span>${cross.includes(k)?`<span class="pill t-strong">${T("различни партии","across parties")}</span>`:""}</header>
+      <ul class="mini-list wrap">${m.map(i=>`<li>${mpLink(i)} <span class="muted small">${esc(gn(lastGroup(MP[i], nsView)))} · ${roleTxt(role(i))}</span></li>`).join("")}</ul>
+      ${c.o!==undefined?`<span class="small">${T("Подавала е становища по законопроекти:","Has filed opinions on bills:")} ${orgLink(D.orgs[c.o].n)}</span>`:""}</div>`; }).join("") || `<p class="empty">${T("Няма общи фирми при тези филтри.","No shared companies for these filters.")}</p>`;
+  $("lnkMore").hidden = openShared || rows.length <= 24;
+  // filers
+  const filers = [...ks].filter(k=>CO[k].o!==undefined);
+  $("lnkFilersWrap").hidden = !filers.length;
+  $("lnkFilers").innerHTML = filers.map(k=>`<div class="tile" data-sec="links"><header><h3>${coLink(k)}</h3></header><span class="small">${T("Депутати","MPs")}: ${CO[k].m.filter(i=>ids.includes(String(i))).map(i=>mpLink(i)).join(", ")}</span><span class="small">${T("Становища като","Opinions as")} ${orgLink(D.orgs[CO[k].o].n)} · ${D.orgs[CO[k].o].filings.length}</span></div>`).join("");
+  // by group, in the assembly in view
+  $("lnkGroupsHead").textContent = T(`По групи в ${NSO[nsView]} Народно събрание`,`By group in the ${NSO[nsView]} National Assembly`);
+  $("lnkGroups").innerHTML = D.groups.filter(g=>g.ns===nsView).map(g=>{ const gi=g.ids.filter(mpOk); if(!gi.length) return "";
+    const w=gi.filter(id=>(MP[id].co||[]).length), u=gi.filter(id=>!shOk(MP[id]));
+    const sorted=[...gi].filter(id=>(MP[id].co||[]).length || shLevel(MP[id])==="namesakes").sort((a,b)=>(MP[b].co||[]).length-(MP[a].co||[]).length);
+    const none=gi.filter(id=>!(MP[id].co||[]).length && shLevel(MP[id])!=="namesakes").length;
+    return `<div class="tile tinted" data-sec="links"><header><h3>${esc(gn(g.g))}</h3><span class="stat">${T(`${w.length} от ${gi.length} с връзки · ${u.length} непотвърдени`,`${w.length} of ${gi.length} with ties · ${u.length} unconfirmed`)}</span></header>
+      <div class="chips">${sorted.map(id=>{ const m=MP[id], n=(m.co||[]).length, s=shLevel(m); return `<button class="chip${n?"":" quiet"}" data-mp="${id}" title="${L[s]}">${esc(shortName(m.n))}${n?`<span class="n">◆${n}</span>`:""}${s==="name_only"?`<span class="n">~</span>`:s==="namesakes"?`<span class="n">?</span>`:""}</button>`; }).join("")}</div>${none?`<span class="small">${T(`+ ${none} без роли във фирми`,`+ ${none} with no company roles`)}</span>`:""}</div>`; }).join("");
+}
+let openShared = false;
+
+function coView(k){
+  const c = CO[k]; if (!c) return null; const L = SHL[LANG];
+  return {sec:"links", hash:"co-"+k, make:()=>coView(k),
+   head:`<p class="kicker">${CTYPE[LANG][c.t]} · ${T("ЕИК","UIC")} ${esc(c.e)}</p><h3 id="drawerTitle"${LANG==="en"&&c.l?"":` lang="bg"`}>${esc(coName(c))}</h3>${LANG==="en"&&c.l?`<div class="facts" lang="bg"><span>${esc(c.n)}</span></div>`:""}<div class="facts"><span>${c.m.length} ${T(pl(c.m.length,"депутат","депутати"),pl(c.m.length,"MP","MPs"))}</span></div>`,
+   html:`<div><p class="kicker">${T("Депутати с роля в","MPs with a role in")} ${T("тази организация","this entity")}</p><ul>${c.m.map(i=>{ const m=MP[i]; const r=(m.co.find(([kk])=>kk===k)||[])[1]||""; return `<li>${mpLink(i)}<span class="small muted">${Object.keys(m.as).sort().reverse().map(ns=>`${NSO[ns]}: ${esc(gn(m.as[ns]))}`).join(" · ")}</span><span class="small">${roleTxt(r)}${shLevel(m)==="name_only"?` · <span class="muted">${L.name_only}</span>`:""}</span></li>`; }).join("")}</ul></div>
+   ${c.o!==undefined?`<div><p class="kicker">${T("Становища по законопроекти","Opinions on bills")}</p><p style="margin:0">${T("Същата организация е подавала становища:","The same entity has filed opinions:")} ${orgLink(D.orgs[c.o].n)}</p></div>`:""}
+   <div class="links"><button class="filterlink" data-netco="${k}">${T("Покажи в мрежата на връзките","Show in the network")}</button><a href="https://shtrack.net/view/company/${encodeURIComponent(c.e)}/?bird_lang=bg" target="_blank" rel="noopener">${T("Отвори в ЩРАК ↗","Open in ShTRAK ↗")}</a></div>
+   <p class="note">${T("Ролите са по Търговския регистър и включват минали роли. Участието във фирма или организация само по себе си не е нарушение.","Roles come from the Commercial Register and include past roles. A role in a company or organisation is not wrongdoing in itself.")}</p>`};
+}
+function mpTies(id){
+  const m = MP[id], s = shLevel(m), co = m.co || [], L = SHL[LANG];
+  const why = {
+    matched: T("ЩРАК отбелязва лицето като народен представител.","ShTRAK tags this person as a Member of Parliament."),
+    ambiguous: T("ЩРАК има няколко записа с това име, отбелязани като депутат; показан е този с най-много връзки.","ShTRAK has several records with this name tagged as an MP; the one with most ties is shown."),
+    name_only: T("В регистъра има точно едно лице с това пълно име, но ЩРАК не го отбелязва като депутат. Много вероятно е същият човек; проверете в ЩРАК.","The register has exactly one person with this full name, but ShTRAK does not tag them as an MP. Very likely the same person; check in ShTRAK."),
+    namesakes: T(`В регистъра има ${m.sh?.k||"няколко"} души с това пълно име и никой не е отбелязан като депутат. Не можем да определим кой от тях е депутатът.`,`The register has ${m.sh?.k||"several"} people with this full name and none is tagged as an MP. We cannot tell which one is the MP.`),
+    none: T("В Търговския регистър няма лице с това пълно име. Най-често това значи, че няма роли във фирми под това име.","Nobody with this full name is in the Commercial Register. Usually this means no company roles under that name."),
+    nodata: T("Няма данни от ЩРАК за това лице.","No ShTRAK data for this person."),
+  }[s];
+  const link = m.sh?.g ? `<a class="ent-mp" href="https://shtrack.net/view/person/${esc(m.sh.g)}/?bird_lang=bg" target="_blank" rel="noopener">${T("Отвори в ЩРАК ↗","Open in ShTRAK ↗")}</a>`
+    : `<a class="ent-mp" href="https://shtrack.net/search/${encodeURIComponent(m.n)}/?bird_lang=bg" target="_blank" rel="noopener">${T("Търси в ЩРАК ↗","Search ShTRAK ↗")}</a>`;
+  const others = k => CO[k].m.filter(i=>String(i)!==String(id));
+  return `<div data-sec="links"><p class="kicker">${T("Връзки с фирми и организации (Търговски регистър чрез ЩРАК)","Company and organisation ties (Commercial Register via ShTRAK)")}</p>
+    <p style="margin:6px 0 0"><span class="pill lv-${s}">${L[s]}</span> <span class="small">${why}</span></p>
+    ${co.length?`<div class="egonet" id="ego"></div>
+    <ul class="ties">${co.map(([k,r])=>`<li>${coLink(k)}<span class="small"><span class="pill ct-${CO[k].t}">${CTYPE[LANG][CO[k].t]}</span> ${roleTxt(r)}</span>${others(k).length?`<span class="small">${T("Също:","Also:")} ${others(k).map(i=>mpLink(i)).join(", ")}</span>`:""}${CO[k].o!==undefined?`<span class="small">${T("Подавала становища като","Filed opinions as")} ${orgLink(D.orgs[CO[k].o].n)}</span>`:""}</li>`).join("")}</ul>`:""}
+    <div class="links" style="margin-top:10px">${co.length?`<button class="filterlink" data-netmp="${id}">${T("Отвори в мрежата на връзките","Open in the connections network")}</button>`:""}${link}</div></div>`;
+}
+
+// ---------- drawer content
+function lawBody(l, det){
+  det = det || {pt:[], pw:[], att:""};
+  const counts = {}; l.props.forEach(p=>counts[p.o]=(counts[p.o]||0)+1);
+  const fps = D.fp.filter(f=>f.law===l.id);
+  return `
+   ${fps.length?`<div><p class="kicker">${T("Текстови отпечатъци","Text footprints")}</p><div class="grid">${fps.map(fpCard).join("")}</div></div>`:""}
+   ${l.ops.length?`<div><p class="kicker">${T("Становища","Opinions")}</p><div class="orgline" lang="bg">${[...new Map(l.ops.map(o=>[o.org,o])).values()].map(o=>`<button class="chip" data-org="${orgIdx[o.org]}">${esc(o.org)}</button>`).join("")}</div></div>`:""}
+   ${det.att?`<div><p class="kicker">${T("Присъствали на заседанието на комисията (първо четене)","Present at the committee sitting (first reading)")}</p><p class="small muted" style="margin:0;overflow-wrap:anywhere">${esc(nm(det.att))}</p></div>`:""}
+   ${l.other.length?`<div><p class="kicker">${T("Други закони, променени чрез ПЗР","Other laws changed through transitional and final provisions")}</p><div class="tbl"><table><thead><tr><th>${T("Закон","Law")}</th><th class="n">${T("Знаци","Characters")}</th><th>${T("Произход","Origin")}</th></tr></thead><tbody>${l.other.map(a=>`<tr><td><span lang="bg">${esc(a.law)}</span>${a.by.length?`<br><span class="muted small">${T("от","by")} ${esc(a.by.map(nm).join("; "))}</span>`:""}</td><td class="n">${fmt(a.ch)}</td><td><span class="pill or-${a.or}">${ORI[a.or]}</span></td></tr>`).join("")}</tbody></table></div></div>`:""}
+   ${l.props.length?`<div><p class="kicker">${T("Предложения за второ гласуване","Amendments for the second vote")} · ${Object.entries(counts).map(([k,v])=>`${v} ${OUT[k]}`).join(" · ")}</p><div style="display:grid;gap:8px;margin-top:8px">${l.props.map((p,k)=>{ const who=det.pw[k]||p.who||[]; const tx=det.pt[k]||""; return `<div class="prop"><div class="hd"><span class="pill o-${p.o}">${OUT[p.o]}</span><span>${p.ids.length?p.ids.slice(0,4).map(i=>mpLink(i)).join(", "):esc(who.slice(0,4).map(nm).join(", "))}${who.length>4?` +${who.length-4}`:""}</span>${p.grp.length?`<span class="muted small">${esc(p.grp.map(gn).join(", "))}</span>`:""}${p.pzr?`<span class="pill o-unclear">${T("ПЗР","TFP")}</span>`:""}</div><div class="tx" lang="bg">${esc(tx)}${tx.length>=420?"…":""}</div></div>`; }).join("")}</div></div>`:`<p class="muted">${T("Няма доклад за второ гласуване за този закон.","There is no second-reading report for this law.")}</p>`}`;
+}
+function mpView(id){
+  const m = MP[id]; if (!m) return null;
+  const acc = m.props.filter(x=>OK.has(x.o)).length, law = m.bills.filter(b=>b.st==="promulgated").length;
+  const byLaw = {}; m.props.forEach(x=>{(byLaw[x.law] ||= []).push(x)});
+  return {sec:"people", hash:"mp-"+id, make:()=>mpView(id), after:()=>{ const el=$("ego"); if (!el) return; const ks=new Set((m.co||[]).map(([k])=>k)); const ids=new Set([id]); ks.forEach(k=>CO[k].m.forEach(i=>ids.add(String(i)))); drawNet(el, graphFor([...ids], {ns:m.ns||Object.keys(m.as).sort().pop(), keep:k=>ks.has(k)}), {h:Math.min(340, 170+ks.size*12)}); },
+   head:`<p class="kicker">${T("Депутат","MP")} · ${Object.keys(m.as).sort().reverse().map(ns=>`${NSO[ns]}: ${esc(gn(m.as[ns]))}`).join(" · ")}</p><h3 id="drawerTitle">${esc(nm(m.n))}</h3><div class="facts">${m.va?`<span>${esc(nm(m.va))}</span>`:""}${m.prof?`<span lang="bg">${esc(m.prof)}</span>`:""}</div>`,
+   html:`<div class="minis"><div><b>${m.bills.length}</b><span>${T("внесени законопроекти","bills filed")}</span></div><div><b>${law}</b><span>${T("станали закон","became law")}</span></div><div><b>${acc}/${m.props.length}</b><span>${T("приети предложения","amendments accepted")}</span></div><div><b>${m.fp.length}</b><span>${T("отпечатъци","footprints")}</span></div></div>
+   ${m.ns?`<div><button class="filterlink" data-setparty="${m.ns}|${esc(m.g)}">${T("Филтрирай всички изгледи","Filter all views")}: ${esc(gn(m.g))} (${nsLabel(m.ns)})</button></div>`:""}
+   ${mpTies(id)}
+   ${m.fp.length?`<div><p class="kicker">${T("Външен текст в предложенията","Outside text in the amendments")}</p><div class="grid">${m.fp.map(k=>fpCard(D.fp[k])).join("")}</div></div>`:""}
+   ${m.coms.length?`<div><p class="kicker">${T("Комисии","Committees")}</p><ul lang="bg">${m.coms.map(c=>`<li>${esc(c.c)}${c.r!=="член"?` <span class="muted small">· ${esc(c.r)}</span>`:""}</li>`).join("")}</ul></div>`:""}
+   <div><p class="kicker">${T("Предложения по обнародвани закони","Amendments to promulgated laws")}</p>${Object.keys(byLaw).length?`<ul>${Object.entries(byLaw).map(([lid,xs])=>{const c={};xs.forEach(x=>c[x.o]=(c[x.o]||0)+1);return `<li>${lawLink(+lid)}<span class="small">${Object.entries(c).map(([o,k])=>`<span class="pill o-${o}">${k} ${OUT[o]}</span>`).join(" ")}</span></li>`}).join("")}</ul>`:`<p class="empty">${T("Няма предложения по обнародвани закони.","No amendments to promulgated laws.")}</p>`}</div>
+   <div><p class="kicker">${T("Внесени законопроекти","Bills filed")}</p>${m.bills.length?`<ul>${[...m.bills].sort((a,b)=>b.d.localeCompare(a.d)).map(b=>`<li><a href="${esc(b.u)}" target="_blank" rel="noopener" lang="bg">${esc(b.t)}</a><span class="muted small">${NSO[b.ns]?nsLabel(b.ns)+" · ":""}${dt(b.d)} · <span class="pill st-${b.st}">${ST[b.st]}</span></span></li>`).join("")}</ul>`:`<p class="empty">${T("Няма.","None.")}</p>`}</div>`};
+}
+function orgView(i){
+  const o = D.orgs[i]; if (!o) return null;
+  const byLaw = {}; o.filings.forEach(f=>{(byLaw[f.law ?? "x"] ||= []).push(f)});
+  const nl = Object.keys(byLaw).length;
+  return {sec:"orgs", hash:"org-"+i, make:()=>orgView(i),
+   head:`<p class="kicker">${T("Организация","Organisation")} · ${esc(TLABEL[o.t])}</p><h3 id="drawerTitle" lang="bg">${esc(o.n)}</h3><div class="facts"><span>${nl} ${T(pl(nl,"закон","закона"),pl(nl,"law","laws"))}</span><span>${o.filings.length} ${T(pl(o.filings.length,"становище","становища"),pl(o.filings.length,"opinion","opinions"))}</span></div>`,
+   html:`<div><button class="filterlink" data-settype="${o.t}">${T("Филтрирай всички изгледи","Filter all views")}: ${esc(LANG==="en"?TLABEL[o.t]:TLABEL[o.t].toLowerCase())}</button></div>
+   ${o.fp.length?`<div><p class="kicker">${T("Текст, открит в предложения","Text found in amendments")}</p><div class="grid">${o.fp.map(k=>fpCard(D.fp[k])).join("")}</div></div>`:`<p class="empty">${T("Текстът ѝ не е открит в нито едно предложение.","Its text was not found in any amendment.")}</p>`}
+   <div><p class="kicker">${T("Подадени становища","Opinions filed")}</p><ul>${Object.entries(byLaw).map(([lid,fs])=>`<li>${LAW[lid]?lawLink(+lid):`<span class="muted">${T("Несъпоставен законопроект","Unmatched bill")}</span>`}<span class="small">${fs.map(f=>`<a href="${esc(f.u)}" target="_blank" rel="noopener">${dt(f.d)} ↗</a> <span class="muted" lang="bg">${esc(f.st)}</span>`).join(" · ")}</span></li>`).join("")}</ul></div>`};
+}
+
+// ---------- law page: journey, flow, before/after
+const days = (a,b) => (a && b) ? Math.round((new Date(b)-new Date(a))/864e5) : null;
+let curLaw = null, prevView = "laws", curDet = null;
+function lawPage(l){
+  curLaw = l.id;
+  const tl = l.tl || {};
+  const sponsor = l.cab && !l.sp.length ? T("Министерски съвет","Council of Ministers") : (l.spi.length ? l.spi.slice(0,3).map(i=>mpLink(i)).join(", ")+(l.spi.length>3?` +${l.spi.length-3}`:"") : "—");
+  $("lpHero").innerHTML = `<p class="kick"><i></i>${T("Закон","Law")} · ${nsLong(l.ns)} · ${T("ДВ бр.","SG No.")} ${l.iss}${l.dvd?`, ${esc(dvd(l.dvd))}`:`/${l.dvy||""}`}</p><h1 id="lpTitle" lang="bg">${esc(l.t)}</h1>
+    <p>${T("Вносител","Sponsor")}: ${sponsor}${l.com.length?` · ${T("Водеща комисия","Lead committee")}: <span lang="bg">${esc(l.com[0])}</span>`:""}</p>
+    <div class="links">${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">${T("Текст в ДВ ↗","Text in the State Gazette ↗")}</a>`:""}${l.bill?`<a href="${esc(l.bill)}" target="_blank" rel="noopener">${T("Законопроект","Bill")} ${esc(l.sign)} ↗</a>`:""}<button class="filterlink" data-setlaw="${l.id}">${T("Филтрирай всички изгледи по този закон","Filter all views by this law")}</button></div>`;
+  const ST2 = [["sub",T("Внесен","Filed")],["r1c",T("Доклад на комисията (I)","Committee report (I)")],["r1",T("Приет на първо четене","Passed first reading")],["dl",T("Срок за предложения","Amendment deadline")],["r2c",T("Доклад на комисията (II)","Committee report (II)")],["r2",T("Приет на второ четене","Passed second reading")],["dv",T("Обнародван в ДВ","Promulgated")]];
+  let last = null;
+  $("lpSteps").innerHTML = ST2.map(([k,lab],i)=>{ const d = tl[k]; const g = d && last ? days(last,d) : null; if (d) last = d;
+    return `<div class="step ${d?"done":"miss"} ${i===ST2.length-1?"last":""}"><b>${lab}</b><span class="d">${d?dt(d):T("няма данни","no data")}</span>${g!==null&&g>=0?`<span class="gap">+${g} ${T(pl(g,"ден","дни"),pl(g,"day","days"))}</span>`:""}</div>`; }).join("");
+  const opDates = l.ops.map(o=>o.d).filter(Boolean);
+  const all = [tl.sub, tl.dv, ...opDates].filter(Boolean).sort();
+  const strip = $("lpStrip");
+  if (all.length >= 2){
+    const t0 = new Date(all[0]), t1 = new Date(all[all.length-1]); const span = Math.max(1, t1 - t0);
+    const x = d => ((new Date(d) - t0) / span * 100).toFixed(2);
+    const fpOrgs = new Set(D.fp.filter(f=>f.law===l.id).map(f=>f.org));
+    const byDay = {}; const dots = l.ops.filter(o=>o.d).sort((a,b)=>a.d.localeCompare(b.d)).map(o=>{ const k=o.d; const n=(byDay[k]=(byDay[k]||0)+1)-1; return {o,n}; });
+    const maxStack = Math.max(1, ...Object.values(byDay));
+    const H = maxStack*13 + 8, railTop = H + 10;
+    const ticks = [["sub",T("внесен","filed")],["r1",T("1-во четене","1st reading")],["dl",T("срок","deadline")],["r2",T("2-ро четене","2nd reading")],["dv",T("ДВ","SG")]].filter(([k])=>tl[k]).map(([k,lab])=>({k,lab,x:+x(tl[k])})).sort((a,b)=>a.x-b.x);
+    let lastX = -99, row = 0; ticks.forEach(tk=>{ row = (tk.x - lastX < 11) ? 1 - row : 0; tk.row = row; lastX = tk.x; });
+    const anchor = x => x < 5 ? "translateX(0)" : x > 95 ? "translateX(-100%)" : "translateX(-50%)";
+    strip.style.height = (railTop + 46) + "px";
+    strip.innerHTML = `<div class="rail" style="top:${railTop}px"></div>${tl.r1&&tl.dl?`<div class="win" style="top:${railTop-4}px;left:${x(tl.r1)}%;width:${Math.max(0.6,x(tl.dl)-x(tl.r1))}%" title="${T("Прозорец за предложения между първо и второ четене","Amendment window between first and second reading")}"></div>`:""}
+      ${ticks.map(tk=>`<div class="tick" style="top:${railTop-10}px;left:${tk.x}%"></div><div class="tl" style="top:${railTop+18+tk.row*15}px;left:${tk.x}%;transform:${anchor(tk.x)}">${tk.lab} · ${dts(tl[tk.k])}</div>`).join("")}
+      ${dots.map(({o,n})=>`<button class="op${fpOrgs.has(o.org)?" fp":""}" style="left:${x(o.d)}%;top:${H-8-n*13}px" data-org="${orgIdx[o.org]??""}" title="${esc(o.org)} · ${dt(o.d)}" aria-label="${esc(o.org)}, ${T("становище","opinion")} ${dt(o.d)}"></button>`).join("")}`;
+    const before1 = tl.r1 ? l.ops.filter(o=>o.d && o.d < tl.r1).length : null;
+    $("lpOpLegend").innerHTML = `<span><i style="background:var(--org)"></i>${T("становище","opinion")} (${l.ops.length})</span><span><i style="background:var(--inf)"></i>${T("текстът му е открит в предложение","its text was found in an amendment")}</span>${tl.r1&&tl.dl?`<span><i style="background:var(--law-tint);border:1px dashed var(--law);border-radius:3px"></i>${T("прозорец за предложения","amendment window")}</span>`:""}${before1!==null?`<span>${T(`${before1} от ${l.ops.length} становища са преди първо четене`,`${before1} of ${l.ops.length} opinions came before the first reading`)}</span>`:""}`;
+  } else { strip.innerHTML = `<p class="empty">${T("Няма достатъчно дати за времева линия.","Not enough dates for a timeline.")}</p>`; $("lpOpLegend").innerHTML = ""; }
+  const G = {};
+  for (const p of l.props){ const gs = p.grp.length ? p.grp : ["Без група / неразпознат"]; for (const g of gs){ const r = (G[g] ||= {n:0,ok:0,ok2:0,bad:0,warn:0,mute:0}); r.n++;
+    if (p.o==="supported"||p.o==="partly_supported") r.ok++; else if (p.o==="supported_in_principle") r.ok2++; else if (p.o==="rejected") r.bad++; else if (p.o==="inadmissible_out_of_scope") r.warn++; else r.mute++; } }
+  const rows = Object.entries(G).sort((a,b)=>b[1].n-a[1].n);
+  $("lpFlow").innerHTML = rows.length ? rows.map(([g,r])=>`<div class="frow"><span>${esc(gn(g))}</span><span class="bars3" role="img" aria-label="${esc(gn(g))}: ${T(`${r.ok+r.ok2} приети от ${r.n}`,`${r.ok+r.ok2} of ${r.n} accepted`)}">${["ok","ok2","bad","warn","mute"].map(k=>r[k]?`<span class="sw-${k}" style="width:${(r[k]/r.n*100).toFixed(1)}%" title="${r[k]}"></span>`:"").join("")}</span><span class="n">${T(`${r.ok+r.ok2}/${r.n} приети`,`${r.ok+r.ok2}/${r.n} accepted`)}</span></div>`).join("") : `<p class="empty">${T("Няма предложения за второ гласуване.","No amendments for the second vote.")}</p>`;
+  curDet = null;
+  $("lpMap").innerHTML = ""; $("lpBlocks").innerHTML = `<p class="loading">${T("Зареждане на текстовете…","Loading the texts…")}</p>`;
+  $("lpMore").innerHTML = `<p class="loading">${T("Зареждане…","Loading…")}</p>`;
+  const want = l.id;
+  detail(l.ns).then(all=>{ if (curLaw !== want) return; curDet = all[String(l.id)] || {pt:[],pw:[],bl:[],al:false,att:""};
+    renderBlocks(l, curDet); $("lpMore").innerHTML = lawBody(l, curDet); })
+   .catch(()=>{ $("lpBlocks").innerHTML = `<p class="empty">${T("Текстовете не можаха да се заредят. Опреснете страницата.","The texts could not be loaded. Refresh the page.")}</p>`; $("lpMore").innerHTML = ""; });
+}
+function renderBlocks(l, det){
+  const showAll = $("lpAll").checked;
+  const bl = det.bl || [];
+  $("lpMap").innerHTML = bl.length ? bl.map((b,i)=>`<button class="k-${b.k}${b.fp.length?" fpm":""}" data-jump="${i}" title="${esc(b.lb)} · ${KIND[b.k]}${b.fp.length?" · "+T("текст от ","text from ")+esc(b.fp.join(", ")):""}" aria-label="${esc(b.lb)}, ${KIND[b.k]}"></button>`).join("") : `<p class="empty">${T("Няма доклад за второ гласуване, от който да се извлече сравнение.","There is no second-reading report to compare from.")}</p>`;
+  const cards = bl.map((b,i)=>[b,i]).filter(([b])=>showAll || b.k!=="unchanged");
+  $("lpBlocks").innerHTML = cards.map(([b,i])=>{
+    const acc = b.acc.map(k=>({...l.props[k], who: det.pw[k]||[]})).filter(p=>p.o);
+    const np = b.np;
+    const who = !det.al ? `<span class="who">${T("Авторството по параграфи не е определено за този закон.","Authorship by paragraph could not be determined for this law.")}</span>`
+      : acc.length ? `<span class="who">${T("Промяна по предложение на","Change proposed by")} ${[...new Set(acc.flatMap(p=>p.ids))].map(id=>mpLink(id)).join(", ") || esc(acc.flatMap(p=>p.who).map(nm).join(", "))}</span>`
+      : (b.k==="reworded"||b.k==="new"||b.k==="deleted"||b.k==="tweaked") ? `<span class="who">${T("Редакция на комисията","Committee wording")}${np?T(`; ${np} ${pl(np,"предложение","предложения")} по параграфа не ${pl(np,"е прието","са приети")}`,`; ${np} ${pl(np,"amendment","amendments")} on this paragraph not accepted`):""}</span>`
+      : np ? `<span class="who">${T(`${np} ${pl(np,"предложение","предложения")}, ${pl(np,"неприето","неприети")}`,`${np} ${pl(np,"amendment","amendments")}, not accepted`)}</span>` : "";
+    const body = b.k==="unchanged" ? `<div class="difftext open muted" lang="bg">${esc(b.ex)}${b.ex.length>=240?"…":""}</div>`
+      : b.d ? `<div class="difftext" id="dt${i}" lang="bg">${b.d}</div><button class="moretext" data-more="dt${i}">${T("Покажи целия текст","Show the full text")}</button>`
+      : `<p class="note">${T("Комисията е подкрепила текста с технически поправки, описани в доклада.","The committee supported the text with technical edits described in the report.")}</p>`;
+    return `<article class="pcard" id="pc${i}"><header><b lang="bg">${esc(b.lb||"—")}</b><span class="pill kp-${b.k}">${KIND[b.k]}</span>${b.ins||b.del?`<span class="note">+${b.ins} / −${b.del} ${T("думи","words")}</span>`:""}${b.fp.map(o=>`<span class="pill t-strong">${T("текст от","text from")} ${esc(o)}</span>`).join("")}</header>${who}${body}${b.dv===false?`<span class="note">${T("Тази редакция не е открита дословно в обнародвания текст; възможна е последваща промяна в пленарната зала.","This wording was not found verbatim in the promulgated text; it may have been changed later on the floor.")}</span>`:""}</article>`;
+  }).join("") || `<p class="empty">${T("Няма променени параграфи.","No changed paragraphs.")}</p>`;
+  document.querySelectorAll("#lpBlocks .difftext:not(.open)").forEach(el=>{ if (el.scrollHeight <= el.clientHeight + 4){ el.classList.add("open"); el.nextElementSibling?.remove(); } });
+}
+$("lpAll").addEventListener("change", ()=>{ if (curLaw && curDet) renderBlocks(LAW[curLaw], curDet); });
+$("lpBack").addEventListener("click", ()=>{ go(prevView); });
+document.addEventListener("click", e=>{
+  const j = e.target.closest("[data-jump]"); if (j){ const i=j.dataset.jump; let c=$("pc"+i);
+    if (!c){ $("lpAll").checked = true; renderBlocks(LAW[curLaw], curDet); c=$("pc"+i); }
+    c.scrollIntoView({behavior:"smooth",block:"start"}); c.classList.add("hl"); setTimeout(()=>c.classList.remove("hl"),1600); }
+  const m = e.target.closest("[data-more]"); if (m){ const el=$(m.dataset.more); el.classList.toggle("open"); m.textContent = el.classList.contains("open") ? T("Скрий","Hide") : T("Покажи целия текст","Show the full text"); }
+});
+function openLaw(id){ const l = LAW[id]; if (!l) return;
+  if (current !== "law") prevView = current;
+  if (!drawer.hidden){ drawer.hidden = true; scrim.hidden = true; document.body.style.overflow = ""; stack.length = 0; }
+  $("lpAll").checked = false;
+  lawPage(l); go("law"); setHash("law-"+id); }
+
+// ---------- drawer mechanics
+const drawer=$("drawer"), scrim=$("scrim"), dHead=$("drawerHead"), dBody=$("drawerBody"), dBack=$("dBack");
+const stack = []; let lastFocus = null;
+function show(view, push=true){
+  if (!view) return;
+  if (push) stack.push(view);
+  drawer.dataset.sec = view.sec;
+  dHead.innerHTML = view.head; dBody.innerHTML = view.html; dBody.scrollTop = 0;
+  if (drawer.hidden){ drawer.hidden = false; drawer.dataset.opening = "1"; }
+  view.after?.();
+  if (drawer.dataset.opening){ delete drawer.dataset.opening; lastFocus = document.activeElement; scrim.hidden = false; document.body.style.overflow = "hidden"; }
+  dBack.disabled = stack.length < 2;
+  setHash(view.hash);
+  $("dClose").focus({preventScroll:true});
+}
+function closeDrawer(){ if (drawer.hidden) return; drawer.hidden = true; scrim.hidden = true; document.body.style.overflow = ""; stack.length = 0; setHash(current==="law" && curLaw ? "law-"+curLaw : current); if (lastFocus && lastFocus.isConnected) lastFocus.focus({preventScroll:true}); }
+dBack.addEventListener("click", ()=>{ if (stack.length>1){ stack.pop(); show(stack[stack.length-1], false); } });
+$("dClose").addEventListener("click", closeDrawer);
+scrim.addEventListener("click", closeDrawer);
+function setHash(h){ try{ history.replaceState(null,"", "#"+(h||"overview")); }catch(e){} }
+
+// ---------- name search: MPs, organisations, laws; Cyrillic or Latin
+const fold = s => String(s).toLowerCase().replace(/ё/g,"е").replace(/ss/g,"s").replace(/y/g,"i").replace(/w/g,"v").replace(/ph/g,"f").replace(/[„“"'.,()–-]/g," ").replace(/\s+/g," ").trim();
+// English topic words for Bulgarian law titles, so "budget" or "energy" finds the right laws
+const GLOSS = [[/бюджет/i,"budget"],[/данък|данъч|ДДС/i,"tax taxes VAT"],[/енерг/i,"energy"],[/ратифиц/i,"ratification treaty"],[/избор|Изборния кодекс/i,"elections electoral code"],[/здрав|лекарств|медицин/i,"health medicines"],[/съдебн|прокур|съдилищ/i,"judiciary courts prosecutor"],[/наказател/i,"criminal"],[/труда|трудов/i,"labour employment"],[/социал|пенси/i,"social pensions"],[/образован|училищ|висшето/i,"education schools universities"],[/околната среда|води|отпадъ/i,"environment water waste"],[/пътищ|движението по пътищата|транспорт/i,"roads traffic transport"],[/хазарт/i,"gambling"],[/банк|кредит/i,"banking credit"],[/застрахов/i,"insurance"],[/обществените поръчки/i,"public procurement"],[/корупц|противодействие на корупцията/i,"anti-corruption"],[/МВР|вътрешните работи|полиц/i,"interior police"],[/отбрана|въоръжените сили/i,"defence armed forces"],[/евро\b|еврото|въвеждане на еврото/i,"euro adoption"],[/мерки и действия по време на извънредното положение|COVID|епидеми/i,"covid epidemic emergency"],[/земедел|земеделск|горите|ветеринар/i,"agriculture forests veterinary"],[/туризм/i,"tourism"],[/медии|радиото и телевизията/i,"media broadcasting"],[/личните данни/i,"data protection privacy"],[/акциз/i,"excise"],[/митни/i,"customs"],[/устройство на територията/i,"spatial planning construction"],[/Конституция/i,"constitution"],[/местното самоуправление|общин/i,"municipalities local government"],[/мерките срещу изпирането на пари/i,"anti-money laundering"],[/търговския регистър|търговския закон/i,"commercial register company law"],[/ядрена|атомн/i,"nuclear"],[/климат|емисии/i,"climate emissions"],[/вероизповеда/i,"religion"],[/децата|детето/i,"children"],[/потребител/i,"consumer protection"],[/конкуренц/i,"competition"],[/хазна|държавния дълг/i,"public debt"]];
+const IDX = [
+  ...Object.entries(MP).map(([id,m])=>({k:"mp", id, bg:m.n, key:" "+fold(m.n)+" "+fold(translit(m.n))})),
+  ...D.groups.map(g=>({k:"grp", id:g.ns+"|"+g.g, ns:g.ns, bg:g.g, key:" "+fold(g.g)+" "+fold(translit(g.g))+" "+fold(GEN[g.g]||"")})),
+  ...CO.map((c,i)=>({k:"co", id:i, bg:c.n, key:" "+fold(c.n)+" "+fold(c.l||"")+" "+fold(translit(c.n))+" "+c.e})),
+  ...D.orgs.map((o,i)=>({k:"org", id:i, bg:o.n, key:" "+fold(o.n)+" "+fold(translit(o.n))})),
+  ...D.laws.map(l=>{ const t=shortLaw(l.t).slice(0,160); return {k:"law", id:l.id, bg:l.t, key:" "+fold(t)+" "+fold(translit(t))+" "+fold(GLOSS.filter(([re])=>re.test(t)).map(([,en])=>en).join(" "))}; }),
+];
+const RANK = {mp:0, grp:1, co:2, org:3, law:4}, CAP = {mp:6, grp:4, co:4, org:4, law:5};
+const qEl=$("q"), sres=$("sres"); let hits = [], sel = -1;
+function search(q){
+  const toks = fold(q).split(" ").filter(Boolean); if (!toks.length) return [];
+  const out = [];
+  for (const e of IDX){ let sc = 0, ok = true;
+    for (const t of toks){ const at = e.key.indexOf(t); if (at<0){ ok=false; break; } sc += e.key.indexOf(" "+t) >= 0 ? 0 : 1; }
+    if (ok) out.push([sc, e]); }
+  out.sort((a,b)=>a[0]-b[0] || RANK[a[1].k]-RANK[b[1].k] || (b[1].ns||"").localeCompare(a[1].ns||"") || a[1].bg.length-b[1].bg.length);
+  const per = {mp:0, grp:0, co:0, org:0, law:0};
+  return out.filter(([,e])=>per[e.k]++ < CAP[e.k]).map(([,e])=>e).sort((a,b)=>RANK[a.k]-RANK[b.k]);
+}
+function hitSub(e){
+  if (e.k==="mp"){ const m=MP[e.id]; const ns=Object.keys(m.as).sort(); const g=m.as[ns[ns.length-1]];
+    return `${esc(gn(g))} · ${ns.map(n=>NSO[n]).join(", ")}`; }
+  if (e.k==="grp"){ const g=D.groups.find(x=>x.ns===e.ns&&x.g===e.bg); return `${nsLong(e.ns)} · ${g.ids.length} ${T("депутати","MPs")}`; }
+  if (e.k==="co"){ const c=CO[e.id]; return `${CTYPE[LANG][c.t]} · ${T("ЕИК","UIC")} ${esc(c.e)} · ${c.m.length} ${T(pl(c.m.length,"депутат","депутати"),pl(c.m.length,"MP","MPs"))}`; }
+  if (e.k==="org"){ const o=D.orgs[e.id]; return `${esc(TLABEL[o.t])} · ${o.filings.length} ${T(pl(o.filings.length,"становище","становища"),pl(o.filings.length,"opinion","opinions"))}`; }
+  const l=LAW[e.id]; return `${nsLabel(l.ns)} · ${T("ДВ бр.","SG No.")} ${l.iss}${l.dvd?` · ${esc(dvd(l.dvd))}`:""}`;
+}
+function drawHits(){
+  const q = qEl.value.trim();
+  if (!q){ sres.hidden = true; qEl.setAttribute("aria-expanded","false"); qEl.removeAttribute("aria-activedescendant"); return; }
+  const HEAD = {mp:T("Депутати","MPs"), grp:T("Парламентарни групи","Parliamentary groups"), co:T("Фирми на депутати","MPs' companies"), org:T("Организации","Organisations"), law:T("Закони","Laws")}, SEC = {mp:"people", grp:"people", co:"links", org:"orgs", law:"laws"};
+  let lastK = null;
+  sres.innerHTML = hits.length ? hits.map((e,i)=>{ const h = e.k!==lastK ? `<div class="sh" role="presentation">${HEAD[e.k]}</div>` : ""; lastK = e.k;
+    const label = e.k==="mp" ? esc(nm(e.bg)) : e.k==="grp" ? esc(gn(e.bg)) : e.k==="co" ? esc(coName(CO[e.id])) : e.k==="law" ? esc(shortLaw(e.bg)) : esc(e.bg);
+    const act = e.k==="grp" ? `data-setparty="${esc(e.id)}" data-then="people"` : `data-${e.k}="${e.id}"`;
+    return `${h}<div role="option" id="so${i}" data-sec="${SEC[e.k]}" ${act} aria-selected="${i===sel}"${e.k==="org"||e.k==="law"||(e.k==="co"&&!(LANG==="en"&&CO[e.id].l))?` lang="bg"`:""}><i></i><b>${label}</b><span>${hitSub(e)}</span></div>`; }).join("")
+    : `<p class="none">${T(`Няма резултати за „${esc(q)}“.`,`No results for “${esc(q)}”.`)}</p>`;
+  sres.hidden = false; qEl.setAttribute("aria-expanded","true");
+  if (sel>=0){ qEl.setAttribute("aria-activedescendant","so"+sel); $("so"+sel)?.scrollIntoView({block:"nearest"}); } else qEl.removeAttribute("aria-activedescendant");
+}
+function closeSearch(clear){ sres.hidden = true; qEl.setAttribute("aria-expanded","false"); sel=-1; if (clear) qEl.value = ""; }
+qEl.addEventListener("input", ()=>{ hits = search(qEl.value); sel = hits.length ? 0 : -1; drawHits(); });
+qEl.addEventListener("focus", ()=>{ if (qEl.value.trim()){ hits = search(qEl.value); drawHits(); } });
+qEl.addEventListener("keydown", e=>{
+  if (e.key==="ArrowDown" && hits.length){ e.preventDefault(); sel = (sel+1) % hits.length; drawHits(); }
+  else if (e.key==="ArrowUp" && hits.length){ e.preventDefault(); sel = (sel-1+hits.length) % hits.length; drawHits(); }
+  else if (e.key==="Enter" && sel>=0 && !sres.hidden){ e.preventDefault(); $("so"+sel)?.click(); }
+  else if (e.key==="Escape"){ e.stopPropagation(); if (!sres.hidden) closeSearch(false); else { qEl.value=""; qEl.blur(); } }
+});
+sres.addEventListener("mousedown", e=>e.preventDefault());
+sres.addEventListener("click", ()=>{ closeSearch(true); qEl.blur(); }, true);
+document.addEventListener("click", e=>{ if (!e.target.closest("#search")) closeSearch(false); });
+document.addEventListener("change", e=>{ if (e.target.id==="lnkAll"){ LM.all = e.target.checked; renderLinks(); } });
+document.addEventListener("keydown", e=>{
+  if ((e.key==="Enter"||e.key===" ") && e.target.closest?.("svg.net .nd")){ e.preventDefault(); e.target.closest(".nd").dispatchEvent(new MouseEvent("click",{bubbles:true})); return; }
+  if (e.key==="Escape") closeDrawer();
+  if (e.key==="/" && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||"") && drawer.hidden){ e.preventDefault(); qEl.focus(); }
+});
+
+// ---------- views
+const VIEWS = ["overview","influence","people","orgs","links","laws","law","method"];
+let current = "overview";
+const openAsm = new Set();
+function go(v, keepScroll){
+  if (!VIEWS.includes(v)) v = "overview";
+  current = v;
+  for (const id of VIEWS) $("v-"+id).hidden = id !== v;
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-current", t.dataset.view===(v==="law"?"laws":v) ? "page" : "false"));
+  if (!keepScroll) window.scrollTo({top:0});
+  if (drawer.hidden && v!=="law") setHash(v==="links" && LM.focus ? (LM.focus.mp ? "links-mp-"+LM.focus.mp : "links-co-"+LM.focus.co) : v);
+  if (v==="links") renderLinks();
+}
+document.addEventListener("click", e=>{
+  const j = e.target.closest(".jump:not(.ghost)"); if (j){ e.preventDefault(); $("lenses").scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  const sn = e.target.closest("[data-setns]"); if (sn){ F.ns = sn.dataset.setns; if (F.party && pparse(F.party)[0]!==F.ns) F.party=""; render(); return; }
+  const oa = e.target.closest("[data-openasm]"); if (oa){ openAsm.add(oa.dataset.openasm); render(); return; }
+  const nm_ = e.target.closest("[data-netmp],[data-netco],[data-netclear]"); if (nm_){ e.preventDefault();
+    LM.focus = nm_.dataset.netmp ? {mp:nm_.dataset.netmp} : nm_.dataset.netco ? {co:+nm_.dataset.netco} : null;
+    closeDrawer(); go("links"); return; }
+  if (e.target.closest("#lnkMore")){ openShared = true; renderLinks(); return; }
+  const co_ = e.target.closest("[data-co]"); if (co_){ e.preventDefault(); show(coView(+co_.dataset.co)); return; }
+  const t = e.target.closest("[data-mp],[data-org],[data-law],[data-go],[data-view],[data-setparty],[data-settype],[data-setlaw]"); if (!t) return;
+  e.preventDefault();
+  if (t.dataset.view) { closeDrawer(); go(t.dataset.view); }
+  else if (t.dataset.go) go(t.dataset.go);
+  else if (t.dataset.mp) show(mpView(t.dataset.mp));
+  else if (t.dataset.org) show(orgView(+t.dataset.org));
+  else if (t.dataset.law) openLaw(+t.dataset.law);
+  else { if (t.dataset.setparty){ F.party=t.dataset.setparty; F.ns=pparse(F.party)[0]; } if (t.dataset.settype) F.type=t.dataset.settype; if (t.dataset.setlaw){ F.law=t.dataset.setlaw; F.ns=LAW[F.law]?.ns||F.ns; } closeDrawer(); render(); if (t.dataset.then) go(t.dataset.then); }
+});
+for (const [el,k] of [[fNs,"ns"],[fParty,"party"],[fType,"type"],[fLaw,"law"],[fSig,"sig"]]) el.addEventListener("change", ()=>{ F[k]=el.value;
+  if (k==="ns"){ if (F.party && pparse(F.party)[0]!==F.ns) F.party=""; if (F.law && LAW[F.law]?.ns!==F.ns && F.ns) F.law=""; }
+  if (k==="party" && F.party) F.ns = pparse(F.party)[0];
+  if (k==="law" && F.law) F.ns = LAW[F.law]?.ns || F.ns;
+  render(); });
+fClear.addEventListener("click", ()=>{ F.ns=F.party=F.type=F.law=F.sig=""; render(); });
+
+// ---------- language switch: static text swaps from data-en; everything else re-renders
+const I18N = [...document.querySelectorAll("[data-en]")].map(el=>[el, el.innerHTML]);
+const I18A = [...document.querySelectorAll("[data-en-aria]")].map(el=>[el, el.getAttribute("aria-label")]);
+const I18P = [...document.querySelectorAll("[data-en-ph]")].map(el=>[el, el.getAttribute("placeholder")]);
+const langBtn = $("langBtn");
+function applyLang(){
+  document.documentElement.lang = LANG;
+  for (const [el,bg] of I18N) el.innerHTML = LANG==="en" ? el.dataset.en : bg;
+  for (const [el,bg] of I18A) el.setAttribute("aria-label", LANG==="en" ? el.dataset.enAria : bg);
+  for (const [el,bg] of I18P) el.setAttribute("placeholder", LANG==="en" ? el.dataset.enPh : bg);
+  langBtn.textContent = LANG==="en" ? "БГ" : "EN";
+  langBtn.lang = LANG==="en" ? "bg" : "en";
+  langBtn.setAttribute("aria-label", LANG==="en" ? "Превключи на български" : "Switch to English");
+  setDicts(); buildSig(); fillStatic(); legends(); footer(); renderMethod(); render();
+  if (curLaw && current==="law") lawPage(LAW[curLaw]);
+  if (!drawer.hidden && stack.length){ for (let i=0;i<stack.length;i++) stack[i] = stack[i].make(); show(stack[stack.length-1], false); }
+  if (!sres.hidden){ hits = search(qEl.value); drawHits(); }
+}
+langBtn.addEventListener("click", ()=>{ LANG = LANG==="en" ? "bg" : "en"; try{ localStorage.setItem("lt-lang", LANG); }catch(e){} applyLang(); });
+
+// deep links: #influence etc. pick a view; #mp-ID, #org-N, #law-ID open a record
+function route(){ const h=location.hash.slice(1); let m;
+  if (VIEWS.includes(h) && h!=="law") { closeDrawer(); if (h==="links") LM.focus=null; go(h); return; }
+  if ((m=h.match(/^mp-(\d+)$/))) { go("people", true); show(mpView(m[1])); }
+  else if ((m=h.match(/^org-(\d+)$/))) { go("orgs", true); show(orgView(+m[1])); }
+  else if ((m=h.match(/^law-(-?\d+)$/))) { openLaw(+m[1]); }
+  else if ((m=h.match(/^co-(\d+)$/))) { go("links", true); show(coView(+m[1])); }
+  else if ((m=h.match(/^links-mp-(\d+)$/))) { LM.focus={mp:m[1]}; go("links"); }
+  else if ((m=h.match(/^links-co-(\d+)$/))) { LM.focus={co:+m[1]}; go("links"); }
+  else go("overview"); }
+window.addEventListener("hashchange", route);
+applyLang(); route();
+</script>
