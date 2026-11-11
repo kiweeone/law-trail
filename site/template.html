@@ -1,4 +1,5 @@
 <title>Law Trail</title>
+<script>try{const t=localStorage.getItem("lt-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -150,7 +151,9 @@ main{padding-block:24px 64px}
 .linkbtn{background:none;border:0;padding:0;cursor:pointer;color:inherit;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 40%,transparent);text-underline-offset:3px;font:inherit;text-align:left}
 .linkbtn:hover{text-decoration-color:currentColor}
 .ent-mp{color:var(--ppl-ink)} .ent-org{color:var(--org-ink)} .ent-law{color:var(--law-ink)}
-@media (prefers-color-scheme:light){.ent-law{color:#6e5200}}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .ent-law{color:#6e5200}}
+:root[data-theme="light"] .ent-law{color:#6e5200}
+:root[data-theme="light"]{color-scheme:light}
 
 /* party / type tiles with chips */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -374,6 +377,10 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
 .sres .none{padding:12px;color:var(--muted);font-size:14px;margin:0}
 .langbtn{font:600 12.5px/1 var(--mono);letter-spacing:.06em;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:9px 12px;cursor:pointer}
 .langbtn:hover{border-color:var(--ink)}
+.themebtn{display:grid;place-items:center;width:36px;height:34px;padding:0;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:999px;cursor:pointer}
+.themebtn:hover{border-color:var(--ink)}
+.themebtn svg{width:16px;height:16px}
+@media (max-width:640px){.themebtn{order:2}}
 @media (max-width:640px){.search{flex:1 1 calc(100% - 70px);order:2}.langbtn{order:2}.tabs{order:3}.sres{width:calc(100vw - 32px)}}
 
 /* ---------- manifesto links */
@@ -412,6 +419,7 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
      aria-label="Търсене по име" data-en-aria="Search by name">
    <div class="sres" id="sres" role="listbox" hidden></div>
   </div>
+  <button class="themebtn" id="themeBtn" aria-label="Тъмен режим"></button>
   <button class="langbtn" id="langBtn" lang="en" aria-label="Switch to English">EN</button>
   <nav class="tabs" aria-label="Изгледи" data-en-aria="Views">
    <a class="tab" data-sec="overview" href="#overview" data-view="overview"><i></i><span data-en="Home">Начало</span></a>
@@ -1323,11 +1331,20 @@ function applyLang(){
   langBtn.textContent = LANG==="en" ? "БГ" : "EN";
   langBtn.lang = LANG==="en" ? "bg" : "en";
   langBtn.setAttribute("aria-label", LANG==="en" ? "Превключи на български" : "Switch to English");
-  setDicts(); buildSig(); fillStatic(); legends(); footer(); renderMethod(); render();
+  setDicts(); buildSig(); fillStatic(); legends(); footer(); renderMethod(); render(); themeUI();
   if (curLaw && current==="law") lawPage(LAW[curLaw]);
   if (!drawer.hidden && stack.length){ for (let i=0;i<stack.length;i++) stack[i] = stack[i].make(); show(stack[stack.length-1], false); }
   if (!sres.hidden){ hits = search(qEl.value); drawHits(); }
 }
+// light / dark: follows the system until the viewer picks one; the choice is remembered
+const themeBtn = $("themeBtn"), darkMQ = matchMedia("(prefers-color-scheme: dark)");
+const isDark = () => (document.documentElement.dataset.theme || (darkMQ.matches ? "dark" : "light")) === "dark";
+const SUN = `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3 3l1.1 1.1M11.9 11.9L13 13M3 13l1.1-1.1M11.9 4.1L13 3"/></g></svg>`;
+const MOON = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 10.2A6 6 0 0 1 5.8 2.4a6 6 0 1 0 7.8 7.8z" fill="currentColor"/></svg>`;
+function themeUI(){ const d = isDark(); themeBtn.innerHTML = d ? SUN : MOON;
+  const lab = d ? T("Светъл режим","Light mode") : T("Тъмен режим","Dark mode"); themeBtn.setAttribute("aria-label", lab); themeBtn.title = lab; }
+themeBtn.addEventListener("click", ()=>{ const t = isDark() ? "light" : "dark"; document.documentElement.dataset.theme = t; try{ localStorage.setItem("lt-theme", t); }catch(e){} themeUI(); });
+darkMQ.addEventListener?.("change", themeUI);
 langBtn.addEventListener("click", ()=>{ LANG = LANG==="en" ? "bg" : "en"; try{ localStorage.setItem("lt-lang", LANG); }catch(e){} applyLang(); });
 
 // deep links: #influence etc. pick a view; #mp-ID, #org-N, #law-ID open a record
