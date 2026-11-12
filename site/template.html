@@ -838,7 +838,7 @@ function render(){
 
   // home: strongest leads first
   const cfs = CF.filter(cfOk);
-  const topFp = strong.filter((f,i,a)=>a.findIndex(g=>g.law===f.law && (g.org===f.org || g.pas.slice(0,60)===f.pas.slice(0,60)))===i).slice(0,3);
+  const topFp = strong.filter((f,i,a)=>a.findIndex(g=>g.law===f.law && (g.org===f.org || String(g.ids)===String(f.ids)))===i).slice(0,3);
   const topCf = cfs.filter((c,i,a)=>a.findIndex(g=>g.mp===c.mp)===i).slice(0,3);
   $("tops").innerHTML = [...topFp.map(fpCard), ...topCf.map(cfCard)].join("") || `<p class="empty">${T("Няма следи за този филтър.","No leads for this filter.")}</p>`;
   $("cCf").textContent = count(cfs.length, CF.length);
