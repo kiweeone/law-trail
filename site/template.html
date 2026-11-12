@@ -143,6 +143,16 @@ main{padding-block:24px 64px}
 .o-withdrawn,.o-unclear,.st-withdrawn,.or-unclear,.or-not_found_in_report,.or-no_report,.t-partial,.ord-unclear,.st-pending,.or-in_bill_as_introduced{background:var(--bg);color:var(--muted)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);align-items:center}
 
+/* sector-lead tile */
+.cf{border-left:4px solid var(--lnk)}
+.cf .flow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-weight:600}
+.cf .arrow{color:var(--muted);font-weight:400;font-size:14px}
+.cf ul{margin:0;padding:10px 12px;list-style:none;display:grid;gap:6px;background:var(--lnk-tint);color:var(--lnk-ink);border-radius:var(--r-sm);font-size:13.5px}
+.cf ul .linkbtn{color:inherit;font-weight:600}
+.pill.tp{background:var(--law-tint);color:var(--law-ink)}
+.pill.cs-active{background:var(--bad-soft);color:var(--bad)} .pill.cs-undated{background:var(--bg);color:var(--muted)} .pill.cs-ended{background:var(--warn-soft);color:var(--warn)}
+.pill.why{background:var(--lnk-tint);color:var(--lnk-ink)}
+.lawtile .t,.b-law .mini-list li{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 /* footprint tile */
 .fp{border-left:4px solid var(--inf)}
 .fp .flow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-weight:600}
@@ -347,6 +357,15 @@ svg.net .edges line{stroke:color-mix(in srgb,var(--muted) 55%,transparent);strok
 svg.net .nd{cursor:pointer;outline:none}
 svg.net .nd circle,svg.net .nd rect{stroke:var(--surface);stroke-width:1.5}
 svg.net .nd:hover circle,svg.net .nd:hover rect,svg.net .nd:focus-visible circle,svg.net .nd:focus-visible rect{stroke:var(--ink);stroke-width:2.5}
+svg.net{cursor:grab} svg.net:active{cursor:grabbing}
+svg.net text.ho{display:none} svg.net .nd.on text.ho{display:block}
+svg.net.hov .nd:not(.on){opacity:.16} svg.net.hov .edges line:not(.on){opacity:.08}
+svg.net.hov .edges line.on{stroke:var(--ink);stroke-width:1.6}
+#lnkNet{position:relative}
+.zoomctl{position:absolute;right:10px;top:10px;display:grid;gap:4px}
+.zoomctl button{width:32px;height:32px;border-radius:8px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font:600 16px/1 var(--body);cursor:pointer}
+.zoomctl button:hover{border-color:var(--ink)}
+@media (prefers-reduced-motion:reduce){svg.net *{transition:none!important}}
 svg.net .nd circle.dash{stroke-width:2.2;stroke-dasharray:2.5 1.8}
 svg.net .nd.focus circle,svg.net .nd.focus rect{stroke:var(--ink);stroke-width:3}
 svg.net text{font:500 10.5px/1 var(--body);fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
@@ -458,6 +477,9 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
     <div class="jumps"><a class="jump" href="#lenses" data-en="To the data ↓">Към данните ↓</a><a class="jump ghost" href="#method" data-view="method" data-en="How it works and its limits">Как работи и какви са ограниченията</a></div>
   </div>
 
+  <div class="datahead"><h2 data-en="Start here">Първо вижте това</h2><span data-en="The strongest leads in the data, ranked by the same rules for everyone.">Най-силните следи в данните, подредени по едни и същи правила за всички.</span></div>
+  <div class="grid wide" id="tops"></div>
+
   <div class="datahead" id="lenses"><h2 data-en="Five lenses">Пет гледни точки</h2><span data-en="Each view answers one question.">Всеки изглед отговаря на един въпрос.</span></div>
   <div class="lenses">
     <button class="lens" data-sec="influence" data-go="influence"><span class="k"><i></i><span data-en="Influence">Влияние</span></span><span class="q" data-en="Whose words made it into the law?">Чии думи влязоха в закона?</span><span class="d" data-en="Amendments that copy an organisation's opinion word for word, late changes to other laws, and attempts outside the bill's scope.">Предложения, които копират дума по дума становище на организация, както и късни промени в други закони и опити извън обхвата на законопроекта.</span><span class="go" data-en="To Influence">Към Влияние</span></button>
@@ -478,6 +500,9 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
   <div class="legend" id="infLegend"></div>
   <div class="subhead"><h2 data-en="Strong footprints">Силни отпечатъци</h2><span class="count" id="cFp"></span></div>
   <div class="grid wide" id="fps"></div>
+  <div class="subhead"><h2 data-en="Laws in the MP's own sector">Закони в сектора на депутата</h2><span class="count" id="cCf"></span><p data-en="An MP sponsored or amended a law in a sector where they hold a role in a company or organisation in the Commercial Register. The sector is read from the company's name, so each card is a reason to check, not a finding.">Депутат е внесъл или променил закон в сектор, в който има роля във фирма или организация по Търговския регистър. Секторът е определен по името на фирмата, затова всяка карта е повод за проверка, а не извод.</p></div>
+  <div class="grid wide" id="cfs"></div>
+  <button class="morebtn" id="cfMore" data-en="Show all">Покажи всички</button>
   <div class="subhead"><h2 data-en="Other signals">Други сигнали</h2><span class="count" id="cSig"></span><p data-en="Patterns worth a second look. Each is a reason to open the primary source and none is a finding of wrongdoing.">Модели, които заслужават втори прочит. Всеки е повод да отворите първоизточника и никой не е констатация за нарушение.</p></div>
   <div class="grid wide" id="signals"></div>
   <details class="fold" id="fpFold"><summary><span data-en="Partial footprints">Частични отпечатъци</span> <span class="count" id="cFpP"></span></summary>
@@ -503,7 +528,7 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
 <section class="view" id="v-links" data-sec="links" hidden aria-labelledby="h-lnk">
   <div class="hero"><p class="kick"><i></i><span data-en="Connections">Връзки</span></p><h1 id="h-lnk" data-en="Who is tied to which companies?">Кой с какви фирми е свързан?</h1>
    <p data-en="Roles of MPs in companies, associations and foundations, from the Commercial Register via ShTRAK by BIRD.BG: owners, partners, managers and board members, current and past. The network shows the companies and organisations that two or more MPs share. The parliament itself, party registrations and state posts are left out.">Ролите на депутатите във фирми, сдружения и фондации по Търговския регистър, чрез ЩРАК на BIRD.BG: собственици, съдружници, управители и членове на съвети, настоящи и минали. Мрежата показва фирмите и организациите, които двама или повече депутати споделят. Самото Народно събрание, партийните регистрации и държавните длъжности са изключени.</p>
-   <p class="how" data-en="Click a circle (MP) or a square (company) to open it. A role in a company is not wrongdoing; it matters when the company works in the area a law affects.">Кликнете кръгче (депутат) или квадратче (фирма), за да го отворите. Ролята във фирма не е нарушение; има значение, когато фирмата работи в сферата, която законът засяга.</p>
+   <p class="how" data-en="Hover a node to see its ties; drag to move, use + and − to zoom. Click a circle (MP) or a square (company) to open it. A role in a company is not wrongdoing; it matters when the company works in the area a law affects.">Посочете възел, за да видите връзките му; влачете, за да местите, и ползвайте + и −, за да приближите. Кликнете кръгче (депутат) или квадратче (фирма), за да го отворите. Ролята във фирма не е нарушение; има значение, когато фирмата работи в сферата, която законът засяга.</p>
    <div class="asmpills" id="lnkAsm"></div>
    <div class="nums" id="lnkNums"></div></div>
   <div class="panel2"><h2 data-en="How many MPs we could match">Колко депутати успяхме да открием</h2><div id="lnkCov" style="display:grid;gap:10px"></div></div>
@@ -639,7 +664,7 @@ let partyKey = null, lawKey = null;
 function fillStatic(){
   fNs.innerHTML = `<option value="">${T("Всички народни събрания","All National Assemblies")}</option>` + D.asm.map(a=>`<option value="${a.ns}">${nsLong(a.ns)} (${yrs(a)})</option>`).join("");
   fType.innerHTML = `<option value="">${T("Всички видове организации","All organisation types")}</option>` + OTYPE.map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
-  fSig.innerHTML = [["",T("Всичко","Everything")],["fp",T("Само с текстов отпечатък","Only with a text footprint")],["late",T("Късни промени в други закони","Late changes to other laws")],["inadm",T("Недопустими предложения","Inadmissible amendments")],["biz",T("Депутати с връзки с фирми","MPs with company ties")]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
+  fSig.innerHTML = [["",T("Всичко","Everything")],["fp",T("Само с текстов отпечатък","Only with a text footprint")],["late",T("Късни промени в други закони","Late changes to other laws")],["inadm",T("Недопустими предложения","Inadmissible amendments")],["conf",T("Закони в сектора на депутата","Laws in the MP's own sector")],["biz",T("Депутати с връзки с фирми","MPs with company ties")]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("");
   partyKey = lawKey = null;
 }
 function fillParty(){ const key = F.ns+"|"+LANG; if (partyKey === key) return; partyKey = key;
@@ -652,7 +677,10 @@ const hasFp = new Set(D.fp.map(f=>f.law));
 const lateLaw = l => l.other.some(a=>a.or==="added_at_second_reading");
 const inadmLaw = l => l.props.some(p=>p.o==="inadmissible_out_of_scope");
 const biz = id => (MP[id]?.sh?.f || 0) > 0;
-const sigLaw = l => !F.sig || (F.sig==="fp" ? hasFp.has(l.id) : F.sig==="late" ? lateLaw(l) : F.sig==="inadm" ? inadmLaw(l) : l.props.some(p=>p.ids.some(biz)) || l.spi.some(biz));
+const CF = D.cf || [], cfLaw = new Set(CF.map(c=>c.law)), cfMp = {}, cfByLaw = {};
+CF.forEach((c,i)=>{ (cfMp[c.mp] ||= []).push(i); (cfByLaw[c.law] ||= []).push(i); });
+const cfOk = c => (!F.ns || c.ns===F.ns) && inPartyAt([c.mp], c.ns) && (!F.law || c.law==F.law) && !F.type && (!F.sig || F.sig==="conf" || F.sig==="biz" || sigLaw(LAW[c.law]));
+const sigLaw = l => !F.sig || (F.sig==="fp" ? hasFp.has(l.id) : F.sig==="conf" ? cfLaw.has(l.id) : F.sig==="late" ? lateLaw(l) : F.sig==="inadm" ? inadmLaw(l) : l.props.some(p=>p.ids.some(biz)) || l.spi.some(biz));
 const fpOk = f => (!F.ns || f.ns===F.ns) && inPartyAt(f.ids, f.ns) && (!F.type || f.ot===F.type) && (!F.law || f.law==F.law) && (!F.sig || F.sig==="fp" || (F.sig==="biz" ? f.ids.some(biz) : sigLaw(LAW[f.law])));
 const lawOk = l => (!F.ns || l.ns===F.ns) && (!F.law || l.id==F.law) && sigLaw(l)
   && (!F.party || l.props.some(p=>propInParty(p,l.ns)) || inPartyAt(l.spi,l.ns))
@@ -665,6 +693,7 @@ const mpOk = id => { const m=MP[id];
   if (F.sig==="inadm" && !m.props.some(p=>p.o==="inadmissible_out_of_scope")) return false;
   if (F.sig==="late" && !m.props.some(p=>lateLaw(LAW[p.law]))) return false;
   if (F.sig==="biz" && !biz(id)) return false;
+  if (F.sig==="conf" && !cfMp[id]) return false;
   if (F.type && !m.fp.some(k=>D.fp[k].ot===F.type)) return false;
   return true; };
 const orgOk = o => (!F.ns || o.filings.some(f=>LAW[f.law]?.ns===F.ns)) && (!F.type || o.t===F.type) && (!F.law || o.filings.some(f=>f.law==F.law))
@@ -707,9 +736,20 @@ function fpCard(f){
   const who = f.ids.length ? f.ids.slice(0,3).map(i=>mpLink(i)).join(", ") + (f.who.length>3?` +${f.who.length-3}`:"") : esc(f.who.map(nm).join(", "));
   return `<article class="tile fp">
    <div class="flow">${orgLink(f.org)}<span class="arrow">${T("→ текстът е в предложение на","→ its text is in an amendment by")}</span>${who}</div>
-   <div class="meta"><span class="pill t-${f.tier}">${TIER[f.tier]}</span><span class="pill ord-${f.order}">${ORD[f.order]}</span><span class="pill o-${f.o}">${OUT[f.o]}</span><span>${T(`${f.w} думи · ${Math.round(f.cov*100)}% от предложението`,`${f.w} words · ${Math.round(f.cov*100)}% of the amendment`)}</span></div>
+   <div class="meta"><span class="pill t-${f.tier}">${TIER[f.tier]}</span><span class="pill ord-${f.order}">${ORD[f.order]}</span><span class="pill o-${f.o}">${OUT[f.o]}</span>${f.ot==="business"?`<span class="pill why">${T("бизнес източник","business source")}</span>`:""}${f.ids.some(i=>(cfMp[i]||[]).some(k=>CF[k].law===f.law))?`<span class="pill why">${T("депутатът има роля в сектора","MP holds a role in the sector")}</span>`:""}<span>${T(`${f.w} думи · ${Math.round(f.cov*100)}% от предложението`,`${f.w} words · ${Math.round(f.cov*100)}% of the amendment`)}</span></div>
    <blockquote lang="bg">…${esc(f.pas)}…</blockquote>
    <div class="meta"><span>${lawLink(f.law)}</span><span>${T("Становище","Opinion")} ${dt(f.od)}${f.fr?` · ${T("първо четене","first reading")} ${dt(f.fr)}`:""}</span><a href="${esc(f.ou)}" target="_blank" rel="noopener">${T("Становище (PDF) ↗","Opinion (PDF) ↗")}</a></div>
+  </article>`;
+}
+const tpName = k => (D.topics[k]||{})[LANG] || k;
+const CST = () => ({active:T("ролята е действала тогава","role held at the time"), undated:T("ролята е без дата","role not dated"), ended:T("ролята е приключила малко преди това","role ended shortly before")});
+const period = x => x.f ? (x.to ? `${x.f.slice(0,4)}–${x.to.slice(0,4)}` : T(`от ${x.f.slice(0,4)} г.`,`since ${x.f.slice(0,4)}`)) : "";
+function cfCard(c){
+  const did = [c.sp ? T("внесе","sponsored") : "", c.n ? T(`предложи ${c.n} ${pl(c.n,"промяна","промени")} (${c.acc} ${pl(c.acc,"приета","приети")}) в`,`proposed ${c.n} ${pl(c.n,"amendment","amendments")} (${c.acc} accepted) to`) : ""].filter(Boolean).join(T(" и "," and "));
+  return `<article class="tile cf" data-sec="links">
+   <div class="flow">${mpLink(c.mp)}<span class="arrow">${did}</span>${lawLink(c.law)}</div>
+   <div class="meta">${c.tp.map(t=>`<span class="pill tp">${esc(tpName(t))}</span>`).join("")}<span class="pill cs-${c.st}">${CST()[c.st]}</span><span>${nsLabel(c.ns)}</span></div>
+   <ul>${c.co.map(x=>`<li>${coLink(x.k)} <span class="small">· ${CTYPE[LANG][CO[x.k].t]}${period(x)?` · ${period(x)}`:""}</span></li>`).join("")}</ul>
   </article>`;
 }
 const activity = id => MP[id].props.length + MP[id].bills.length;
@@ -719,7 +759,7 @@ function lawTile(l){
    <span class="kicker">${nsLabel(l.ns)} · ${T("ДВ бр.","SG No.")} ${l.iss}${l.dvd?` · ${esc(dvd(l.dvd))}`:`/${l.dvy||""}`}</span>
    <span class="t" lang="bg">${esc(shortLaw(l.t))}</span>
    <span class="kpis"><span><b>${l.props.length}</b>${T("предложения","amendments")}</span><span><b>${acc}</b>${T("приети","accepted")}</span><span><b>${l.ops.length}</b>${T("становища","opinions")}</span></span>
-   <span class="badges">${hasFp.has(l.id)?`<span class="pill t-strong">${T("отпечатък","footprint")}</span>`:""}${lateLaw(l)?`<span class="pill or-added_at_second_reading">${T("късна промяна","late change")}</span>`:""}${inadmLaw(l)?`<span class="pill o-inadmissible_out_of_scope">${T("недопустими","inadmissible")}</span>`:""}${l.other.length?`<span class="pill o-unclear">${T(`променя ${l.other.length} ${pl(l.other.length,"друг закон","други закона")}`,`changes ${l.other.length} other ${pl(l.other.length,"law","laws")}`)}</span>`:""}</span>
+   <span class="badges">${hasFp.has(l.id)?`<span class="pill t-strong">${T("отпечатък","footprint")}</span>`:""}${lateLaw(l)?`<span class="pill or-added_at_second_reading">${T("късна промяна","late change")}</span>`:""}${inadmLaw(l)?`<span class="pill o-inadmissible_out_of_scope">${T("недопустими","inadmissible")}</span>`:""}${cfLaw.has(l.id)?`<span class="pill why">${T("сектор на депутат","MP's own sector")}</span>`:""}${l.other.length?`<span class="pill o-unclear">${T(`променя ${l.other.length} ${pl(l.other.length,"друг закон","други закона")}`,`changes ${l.other.length} other ${pl(l.other.length,"law","laws")}`)}</span>`:""}</span>
   </button>`;
 }
 const chipEx = (inner) => `<span class="chip" style="cursor:default;padding:2px 8px">${inner}</span>`;
@@ -796,8 +836,16 @@ function render(){
      <span class="go">${T("Как работи и ограничения","How it works and its limits")}</span>
    </button>`;
 
+  // home: strongest leads first
+  const cfs = CF.filter(cfOk);
+  const topFp = strong.filter((f,i,a)=>a.findIndex(g=>g.law===f.law && (g.org===f.org || g.pas.slice(0,60)===f.pas.slice(0,60)))===i).slice(0,3);
+  const topCf = cfs.filter((c,i,a)=>a.findIndex(g=>g.mp===c.mp)===i).slice(0,3);
+  $("tops").innerHTML = [...topFp.map(fpCard), ...topCf.map(cfCard)].join("") || `<p class="empty">${T("Няма следи за този филтър.","No leads for this filter.")}</p>`;
+  $("cCf").textContent = count(cfs.length, CF.length);
+  $("cfs").innerHTML = cfs.slice(0, openCf ? 999 : 8).map(cfCard).join("") || `<p class="empty">${T("Няма за този филтър.","None for this filter.")}</p>`;
+  $("cfMore").hidden = openCf || cfs.length <= 8;
   // influence
-  $("infNums").innerHTML = `<div><b>${strong.length}</b><span>${T("силни отпечатъци","strong footprints")}</span></div><div><b>${partial.length}</b><span>${T("частични","partial")}</span></div><div><b>${sg.length}</b><span>${T("други сигнали","other signals")}</span></div><div><b>${fmt(D.stats.readable)}</b><span>${T("прочетени становища","opinions read")}</span></div>`;
+  $("infNums").innerHTML = `<div><b>${strong.length}</b><span>${T("силни отпечатъци","strong footprints")}</span></div><div><b>${partial.length}</b><span>${T("частични","partial")}</span></div><div><b>${cfs.length}</b><span>${T("закони в сектора на депутата","laws in the MP's own sector")}</span></div><div><b>${sg.length}</b><span>${T("други сигнали","other signals")}</span></div><div><b>${fmt(D.stats.readable)}</b><span>${T("прочетени становища","opinions read")}</span></div>`;
   $("cFp").textContent = count(strong.length, D.fp.filter(f=>f.tier==="strong").length);
   $("fps").innerHTML = strong.map(fpCard).join("") || `<p class="empty">${T("Няма силни отпечатъци за този филтър.","No strong footprints for this filter.")}</p>`;
   $("cFpP").textContent = count(partial.length, D.fp.filter(f=>f.tier!=="strong").length);
@@ -826,6 +874,7 @@ function render(){
 
   $("lnkAsm").innerHTML = D.asm.map(a=>`<button data-setns="${a.ns}" aria-pressed="${a.ns===nsView}">${NSO[a.ns]} · ${yrs(a)}</button>`).join("");
   if (current==="links") renderLinks();
+  if (base !== null) setHash(base, true);   // keep the filters in the address
   // filter UI
   for (const [el,v] of [[fNs,F.ns],[fParty,F.party],[fType,F.type],[fLaw,F.law],[fSig,F.sig]]) { el.value=v; el.classList.toggle("set", !!v); }
   fClear.hidden = !(F.ns||F.party||F.type||F.law||F.sig);
@@ -876,6 +925,15 @@ function renderMethod(){
        "We search ShTRAK for every MP by full name. If ShTRAK itself tags the person as a Member of Parliament, the match is confirmed. If the register has exactly one person with that name, we accept it as a name-only match and draw it dashed. We then download their roles: owner, partner, manager, board member, current and past. The parliament itself, parties, personal registrations and state posts are not counted."),
      T(`${n(m.people)} депутати: ${(m.shl.matched||0)+(m.shl.ambiguous||0)} потвърдени, ${m.shl.name_only||0} само по име, ${m.shl.namesakes||0} с няколко души със същото име (неразграничими), ${m.shl.none||0} без запис в регистъра. ${n(m.co)} фирми и организации, ${m.co_shared} общи за двама или повече депутати. Да имаш фирма не е нарушение; връзката е интересна, когато фирмата е в сектора, който законът засяга.`,
        `${n(m.people)} MPs: ${(m.shl.matched||0)+(m.shl.ambiguous||0)} confirmed, ${m.shl.name_only||0} name match only, ${m.shl.namesakes||0} with several people of the same name (cannot be told apart), ${m.shl.none||0} with no register record. ${n(m.co)} companies and organisations, ${m.co_shared} shared by two or more MPs. Owning a company is not wrongdoing; a tie matters when the company is in the sector the law affects.`)],
+    [T("Закони в сектора на депутата","Laws in the MP's own sector"),
+     T("Темата на закона се определя от заглавието му, а секторът на фирмата от името ѝ, по един и същ списък от ключови думи (енергетика, здраве, земеделие и т.н.). Когато депутат е внесъл или променил закон по тема, в която има роля във фирма или организация, това се показва като следа. Използват се само потвърдените съвпадения с ЩРАК. За тези фирми изтегляме и датираните вписвания, за да видим дали ролята е действала по времето на закона.",
+       "A law's topic is read from its title and a company's sector from its name, using the same keyword list (energy, health, agriculture and so on). When an MP sponsored or amended a law on a topic where they hold a role in a company or organisation, it is shown as a lead. Only confirmed ShTRAK matches are used. For these companies we also download the dated register entries, to see whether the role was held at the time of the law."),
+     T(`${m.cf} следи за ${m.cf_mps} депутати: ${(m.cf_st.active||0)} с роля, действала по времето на закона, ${(m.cf_st.undated||0)} без дата, ${(m.cf_st.ended||0)} приключили малко преди това. Името не винаги показва с какво се занимава фирмата, а публичните болници и държавните дружества също попадат тук. Това е списък за проверка.`,
+       `${m.cf} leads for ${m.cf_mps} MPs: ${(m.cf_st.active||0)} with a role held at the time of the law, ${(m.cf_st.undated||0)} undated, ${(m.cf_st.ended||0)} ended shortly before. A name does not always show what a company does, and public hospitals and state companies land here too. This is a list to check.`)],
+    [T("Подреждане","Ranking"),
+     T("Следите се подреждат по точки, еднакво за всички. Отпечатък получава повече точки, когато е силен, идва от бизнес организация, становището е подадено първо, предложението е прието и депутатът има роля в същия сектор. Следа за сектор получава повече, когато предложенията са приети и ролята е действала по това време.",
+       "Leads are ranked by points, the same way for everyone. A footprint scores higher when it is strong, comes from a business organisation, the opinion was filed first, the amendment was accepted and the MP holds a role in the same sector. A sector lead scores higher when the amendments were accepted and the role was held at the time."),
+     T("Точките подреждат какво да прочетете първо. Те не измерват вина или вероятност за нарушение.","The points order what to read first. They do not measure guilt or the likelihood of wrongdoing.")],
     [T("Други сигнали","Other signals"),
      T("Късни промени в други закони: текст в преходните и заключителните разпоредби, който го няма в първоначалния законопроект и е добавен на второ четене. Недопустими предложения: комисията ги е отбелязала като извън обхвата на законопроекта. Еднакъв текст от различни групи: две предложения по един закон, почти дума по дума.",
        "Late changes to other laws: text in the transitional and final provisions that was not in the bill as filed and was added at second reading. Inadmissible amendments: the committee marked them as outside the bill's scope. Same text from different groups: two amendments to one law, almost word for word."),
@@ -989,11 +1047,26 @@ function drawNet(el, g, opts={}){
     const trunc = s => s.length>26 ? s.slice(0,25)+"…" : s;
     const focusId = LM.focus?.mp ? "m"+LM.focus.mp : (LM.focus?.co!=null ? "c"+LM.focus.co : null);
     el.innerHTML = `<svg class="net" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${T("Мрежа на връзките между депутати и фирми","Network of ties between MPs and companies")}">
-      <g class="edges">${g.links.map(l=>`<line x1="${l.source.x.toFixed(1)}" y1="${l.source.y.toFixed(1)}" x2="${l.target.x.toFixed(1)}" y2="${l.target.y.toFixed(1)}"${l.dash?' stroke-dasharray="3 3"':""}/>`).join("")}</g>
-      <g class="nodes">${g.nodes.map(d=>`<g class="nd ${d.kind}${d.id===focusId?" focus":""}" ${d.kind==="mp"?`data-mp="${d.mp}"`:`data-co="${d.co}"`} tabindex="0" role="button" aria-label="${esc(d.label)}" transform="translate(${d.x.toFixed(1)},${d.y.toFixed(1)})">
+      <g class="vp"><g class="edges">${g.links.map(l=>`<line data-a="${l.source.id}" data-b="${l.target.id}" x1="${l.source.x.toFixed(1)}" y1="${l.source.y.toFixed(1)}" x2="${l.target.x.toFixed(1)}" y2="${l.target.y.toFixed(1)}"${l.dash?' stroke-dasharray="3 3"':""}/>`).join("")}</g>
+      <g class="nodes">${g.nodes.map(d=>`<g class="nd ${d.kind}${d.id===focusId?" focus":""}" data-id="${d.id}" ${d.kind==="mp"?`data-mp="${d.mp}"`:`data-co="${d.co}"`} tabindex="0" role="button" aria-label="${esc(d.label)}" transform="translate(${d.x.toFixed(1)},${d.y.toFixed(1)})">
         ${d.kind==="mp" ? (d.dash ? `<circle r="${d.r-1}" class="dash" fill="var(--surface)" style="stroke:${d.col}"/>` : `<circle r="${d.r}" fill="${d.col}"/>`) : `<rect x="${-d.r}" y="${-d.r}" width="${d.r*2}" height="${d.r*2}" rx="2" fill="${d.col}"/>`}
         <title>${esc(d.label)}${d.kind==="co"?` · ${d.deg} ${T(pl(d.deg,"депутат","депутати"),pl(d.deg,"MP","MPs"))}`:""}</title>
-        ${lab(d)?`<text x="${d.r+3}" y="3.5"${d.kind==="co"?' class="cl"':""}>${esc(trunc(d.label))}</text>`:""}</g>`).join("")}</g></svg>`;
+        <text x="${d.r+3}" y="3.5" class="${d.kind==="co"?"cl":""}${lab(d)?"":" ho"}">${esc(trunc(d.label))}</text></g>`).join("")}</g></g></svg>${opts.h?"":`<div class="zoomctl"><button data-z="1.5" aria-label="${T("Приближи","Zoom in")}">+</button><button data-z="0.67" aria-label="${T("Отдалечи","Zoom out")}">−</button><button data-z="0" aria-label="${T("Начален изглед","Reset view")}">⟲</button></div>`}`;
+    // hover or focus a node: its ties stay lit, the rest dims, hidden labels appear
+    const sv = el.querySelector("svg"), adj = {};
+    g.links.forEach(l=>{ (adj[l.source.id] ||= new Set()).add(l.target.id); (adj[l.target.id] ||= new Set()).add(l.source.id); });
+    const hi = id => { sv.classList.toggle("hov", !!id); sv.querySelectorAll(".on").forEach(x=>x.classList.remove("on")); if (!id) return;
+      const set = new Set([id, ...(adj[id]||[])]);
+      sv.querySelectorAll(".nd").forEach(n=>{ if (set.has(n.dataset.id)) n.classList.add("on"); });
+      sv.querySelectorAll("line").forEach(l=>{ if (l.dataset.a===id || l.dataset.b===id) l.classList.add("on"); }); };
+    for (const [on, off] of [["mouseover","mouseout"],["focusin","focusout"]]){
+      sv.addEventListener(on, e=>{ const nd = e.target.closest(".nd"); if (nd) hi(nd.dataset.id); });
+      sv.addEventListener(off, e=>{ if (e.target.closest(".nd")) hi(null); }); }
+    // drag to pan, buttons (or Ctrl + wheel) to zoom; plain scrolling and touch are left to the page
+    const vp = d3.select(sv).select(".vp");
+    const zoom = d3.zoom().scaleExtent([0.6, 6]).filter(e=>!e.type.startsWith("touch") && (e.type!=="wheel" || e.ctrlKey || e.metaKey)).on("zoom", e=>vp.attr("transform", e.transform));
+    d3.select(sv).call(zoom).on("dblclick.zoom", null);
+    el.querySelectorAll(".zoomctl button").forEach(b=>b.addEventListener("click", ()=>{ const k = +b.dataset.z; k ? d3.select(sv).transition().duration(180).call(zoom.scaleBy, k) : d3.select(sv).transition().duration(180).call(zoom.transform, d3.zoomIdentity); }));
   }).catch(()=>{ el.innerHTML = `<p class="empty">${T("Графиката не можа да се зареди. Списъците отдолу съдържат същите връзки.","The graph could not be loaded. The lists below hold the same ties.")}</p>`; });
 }
 
@@ -1048,7 +1121,7 @@ function renderLinks(){
     return `<div class="tile tinted" data-sec="links"><header><h3>${esc(gn(g.g))}</h3><span class="stat">${T(`${w.length} от ${gi.length} с връзки · ${u.length} непотвърдени`,`${w.length} of ${gi.length} with ties · ${u.length} unconfirmed`)}</span></header>
       <div class="chips">${sorted.map(id=>{ const m=MP[id], n=(m.co||[]).length, s=shLevel(m); return `<button class="chip${n?"":" quiet"}" data-mp="${id}" title="${L[s]}">${esc(shortName(m.n))}${n?`<span class="n">◆${n}</span>`:""}${s==="name_only"?`<span class="n">~</span>`:s==="namesakes"?`<span class="n">?</span>`:""}</button>`; }).join("")}</div>${none?`<span class="small">${T(`+ ${none} без роли във фирми`,`+ ${none} with no company roles`)}</span>`:""}</div>`; }).join("");
 }
-let openShared = false;
+let openShared = false, openCf = false;
 
 function coView(k){
   const c = CO[k]; if (!c) return null; const L = SHL[LANG];
@@ -1085,6 +1158,7 @@ function lawBody(l, det){
   const counts = {}; l.props.forEach(p=>counts[p.o]=(counts[p.o]||0)+1);
   const fps = D.fp.filter(f=>f.law===l.id);
   return `
+   ${(cfByLaw[l.id]||[]).length?`<div><p class="kicker">${T("Депутати с роля във фирма от сектора на закона","MPs with a role in a company in this law's sector")}</p><div class="grid">${cfByLaw[l.id].map(k=>cfCard(CF[k])).join("")}</div></div>`:""}
    ${fps.length?`<div><p class="kicker">${T("Текстови отпечатъци","Text footprints")}</p><div class="grid">${fps.map(fpCard).join("")}</div></div>`:""}
    ${l.ops.length?`<div><p class="kicker">${T("Становища","Opinions")}</p><div class="orgline" lang="bg">${[...new Map(l.ops.map(o=>[o.org,o])).values()].map(o=>`<button class="chip" data-org="${orgIdx[o.org]}">${esc(o.org)}</button>`).join("")}</div></div>`:""}
    ${det.att?`<div><p class="kicker">${T("Присъствали на заседанието на комисията (първо четене)","Present at the committee sitting (first reading)")}</p><p class="small muted" style="margin:0;overflow-wrap:anywhere">${esc(nm(det.att))}</p></div>`:""}
@@ -1100,6 +1174,7 @@ function mpView(id){
    html:`<div class="minis"><div><b>${m.bills.length}</b><span>${T("внесени законопроекти","bills filed")}</span></div><div><b>${law}</b><span>${T("станали закон","became law")}</span></div><div><b>${acc}/${m.props.length}</b><span>${T("приети предложения","amendments accepted")}</span></div><div><b>${m.fp.length}</b><span>${T("отпечатъци","footprints")}</span></div></div>
    ${m.ns?`<div><button class="filterlink" data-setparty="${m.ns}|${esc(m.g)}">${T("Филтрирай всички изгледи","Filter all views")}: ${esc(gn(m.g))} (${nsLabel(m.ns)})</button></div>`:""}
    ${mpTies(id)}
+   ${(cfMp[id]||[]).length?`<div><p class="kicker">${T("Закони в сектора на негови фирми и организации","Laws in the sector of their companies and organisations")}</p><div class="grid">${cfMp[id].map(k=>cfCard(CF[k])).join("")}</div><p class="note">${T("Секторът е определен по името на фирмата. Проверете документите, преди да правите изводи.","The sector is read from the company's name. Check the documents before drawing conclusions.")}</p></div>`:""}
    ${m.fp.length?`<div><p class="kicker">${T("Външен текст в предложенията","Outside text in the amendments")}</p><div class="grid">${m.fp.map(k=>fpCard(D.fp[k])).join("")}</div></div>`:""}
    ${m.coms.length?`<div><p class="kicker">${T("Комисии","Committees")}</p><ul lang="bg">${m.coms.map(c=>`<li>${esc(c.c)}${c.r!=="член"?` <span class="muted small">· ${esc(c.r)}</span>`:""}</li>`).join("")}</ul></div>`:""}
    <div><p class="kicker">${T("Предложения по обнародвани закони","Amendments to promulgated laws")}</p>${Object.keys(byLaw).length?`<ul>${Object.entries(byLaw).map(([lid,xs])=>{const c={};xs.forEach(x=>c[x.o]=(c[x.o]||0)+1);return `<li>${lawLink(+lid)}<span class="small">${Object.entries(c).map(([o,k])=>`<span class="pill o-${o}">${k} ${OUT[o]}</span>`).join(" ")}</span></li>`}).join("")}</ul>`:`<p class="empty">${T("Няма предложения по обнародвани закони.","No amendments to promulgated laws.")}</p>`}</div>
@@ -1215,7 +1290,17 @@ function closeDrawer(){ if (drawer.hidden) return; drawer.hidden = true; scrim.h
 dBack.addEventListener("click", ()=>{ if (stack.length>1){ stack.pop(); show(stack[stack.length-1], false); } });
 $("dClose").addEventListener("click", closeDrawer);
 scrim.addEventListener("click", closeDrawer);
-function setHash(h){ try{ history.replaceState(null,"", "#"+(h||"overview")); }catch(e){} }
+// ---------- URL + history: every view, record and filter set has its own address, and Back/Forward work.
+// Several setHash calls in one action collapse into a single history entry.
+try{ history.scrollRestoration = "manual"; }catch(e){}
+let routing = false, base = null, pend = null, pendPush = false, lastHash = location.hash, y0 = 0;
+addEventListener("click", ()=>{ y0 = scrollY; }, true);
+const fq = () => { const q = Object.entries(F).filter(([,v])=>v).map(([k,v])=>k+"="+encodeURIComponent(v)).join("&"); return q ? "?"+q : ""; };
+function setHash(h, replace){ base = h || "overview"; pendPush = pendPush || !(replace || routing); if (pend === null) queueMicrotask(commitHash); pend = "#"+base+fq(); }
+function commitHash(){ const full = pend, push = pendPush; pend = null; pendPush = false;
+  if (full !== location.hash && !(full === "#overview" && !location.hash)){
+    try{ if (push){ history.replaceState({y:y0}, ""); history.pushState(null, "", full); } else history.replaceState(history.state, "", full); }catch(e){} }
+  lastHash = location.hash; }
 
 // ---------- name search: MPs, organisations, laws; Cyrillic or Latin
 const fold = s => String(s).toLowerCase().replace(/ё/g,"е").replace(/ss/g,"s").replace(/y/g,"i").replace(/w/g,"v").replace(/ph/g,"f").replace(/[„“"'.,()–-]/g," ").replace(/\s+/g," ").trim();
@@ -1301,6 +1386,7 @@ document.addEventListener("click", e=>{
     LM.focus = nm_.dataset.netmp ? {mp:nm_.dataset.netmp} : nm_.dataset.netco ? {co:+nm_.dataset.netco} : null;
     closeDrawer(); go("links"); return; }
   if (e.target.closest("#lnkMore")){ openShared = true; renderLinks(); return; }
+  if (e.target.closest("#cfMore")){ openCf = true; render(); return; }
   const co_ = e.target.closest("[data-co]"); if (co_){ e.preventDefault(); show(coView(+co_.dataset.co)); return; }
   const t = e.target.closest("[data-mp],[data-org],[data-law],[data-go],[data-view],[data-setparty],[data-settype],[data-setlaw]"); if (!t) return;
   e.preventDefault();
@@ -1348,7 +1434,11 @@ darkMQ.addEventListener?.("change", themeUI);
 langBtn.addEventListener("click", ()=>{ LANG = LANG==="en" ? "bg" : "en"; try{ localStorage.setItem("lt-lang", LANG); }catch(e){} applyLang(); });
 
 // deep links: #influence etc. pick a view; #mp-ID, #org-N, #law-ID open a record
-function route(){ const h=location.hash.slice(1); let m;
+function route(){ routing = true; try{ routeInner(); } finally { routing = false; } }
+function routeInner(){ const [h, q=""] = location.hash.slice(1).split("?"); let m;
+  const nf = {ns:"", party:"", type:"", law:"", sig:""};
+  try{ new URLSearchParams(q).forEach((v,k)=>{ if (k in nf) nf[k] = v; }); }catch(e){}
+  if (Object.keys(nf).some(k=>nf[k]!==F[k])){ Object.assign(F, nf); render(); }
   if (VIEWS.includes(h) && h!=="law") { closeDrawer(); if (h==="links") LM.focus=null; go(h); return; }
   if ((m=h.match(/^mp-(\d+)$/))) { go("people", true); show(mpView(m[1])); }
   else if ((m=h.match(/^org-(\d+)$/))) { go("orgs", true); show(orgView(+m[1])); }
@@ -1357,6 +1447,7 @@ function route(){ const h=location.hash.slice(1); let m;
   else if ((m=h.match(/^links-mp-(\d+)$/))) { LM.focus={mp:m[1]}; go("links"); }
   else if ((m=h.match(/^links-co-(\d+)$/))) { LM.focus={co:+m[1]}; go("links"); }
   else go("overview"); }
-window.addEventListener("hashchange", route);
+window.addEventListener("popstate", e=>{ route(); const y = e.state && e.state.y; requestAnimationFrame(()=>window.scrollTo(0, y || 0)); });
+window.addEventListener("hashchange", ()=>{ if (location.hash !== lastHash) route(); });
 applyLang(); route();
 </script>

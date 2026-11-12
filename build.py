@@ -4,7 +4,7 @@ The page carries summaries; amendment texts and before/after diffs go to one det
 (site/detail-<ns>.json), fetched when a law is opened.
 """
 import collections, json, pathlib, re
-import pbg, rosters, influence
+import pbg, rosters, influence, topics
 
 _BIZ = re.compile(r"(?<![А-ЯA-Z])(?:Е?ООД|Е?АД|ЕТ|КД|КДА|СД|ЕООД|EOOD|OOD|AD|EAD|ET)(?![А-ЯA-Z])|КООПЕРАЦИЯ|LTD|GMBH")
 _STATE1 = re.compile(r"ДЪРЖАВНО ПРЕДПРИЯТИЕ|МИНИСТЕРСТВО|^ОБЩИНА|(?:ИЗПЪЛНИТЕЛНА|ДЪРЖАВНА|НАЦИОНАЛНА) АГЕНЦИЯ|АГЕНЦИЯ (?:ЗА|ПО)|ДЪРЖАВЕН|ДИРЕКЦИЯ|ПРОКУРАТУРА|ОБЛАСТНА АДМИНИСТРАЦИЯ|ИНСПЕКЦИЯ|НАРОДНА БАНКА|КОМИСИЯ (?:ЗА|ПО)|^СМЕТНА ПАЛАТА|ОМБУДСМАН|ДЪРЖАВАТА|ИЗБИРАТЕЛНА КОМИСИЯ|НАЦИОНАЛНО БЮРО")
@@ -260,6 +260,69 @@ def main():
                     "np": b["n_props"], "dv": b.get("in_dv"), "ex": b["before"][:240] if b["kind"] == "unchanged" else ""} for b in bl],
         }
 
+    # ---- topics: law subject from its title, entity sector from its name; then sector leads:
+    #      an MP sponsored or amended a law in a sector where they hold a register role (confirmed matches only)
+    for L_ in LAWS:
+        L_["t"] = topics.short_title(L_["t"])
+        L_["tp"] = topics.law_topics(L_["t"])
+    for c in CO:
+        c["tp"] = topics.entity_topics(c["n"] + " " + c.get("l", "")) if c["t"] in ("biz", "ngo") else []
+    rp = HERE / "shtrack_roles.json"
+    roles = json.loads(rp.read_text(encoding="utf-8")) if rp.exists() else {}
+    CF = []
+    for L_ in LAWS:
+        if not L_["tp"]:
+            continue
+        who = collections.defaultdict(lambda: {"sp": False, "n": 0, "acc": 0})
+        for i in L_["spi"]:
+            who[i]["sp"] = True
+        for p in L_["props"]:
+            for i in p["ids"]:
+                who[i]["n"] += 1
+                who[i]["acc"] += p["o"] in OK
+        tl = L_["tl"] or {}
+        start, end = tl.get("sub") or L_["ad"] or "", tl.get("r2") or L_["ad"] or tl.get("dv") or ""
+        for i, w in who.items():
+            m = mps.get(i)
+            if not m or (m.get("sh") or {}).get("s") not in ("matched", "ambiguous"):
+                continue
+            cos = []
+            for k, _ in m.get("co", []):
+                tp = [t for t in CO[k]["tp"] if t in L_["tp"]]
+                if not tp:
+                    continue
+                r = (roles.get(CO[k]["e"]) or {}).get(m["sh"]["g"]) or {}
+                if not r.get("seen") or not start:
+                    st = "undated"
+                elif r["from"] and end and r["from"] > end:
+                    continue                                   # the role began after the law: not a lead
+                elif r["to"] and r["to"] < start:
+                    if int(start[:4]) - int(r["to"][:4]) > 3:
+                        continue                               # ended long before
+                    st = "ended"
+                else:
+                    st = "active"
+                cos.append({"k": k, "st": st, "tp": tp, **({"f": r["from"]} if r.get("from") else {}), **({"to": r["to"]} if r.get("to") else {})})
+            if cos:
+                best = "active" if any(c["st"] == "active" for c in cos) else "undated" if any(c["st"] == "undated" for c in cos) else "ended"
+                sc = 1 + (2 if w["acc"] else 0) + (1 if w["sp"] else 0) + {"active": 2, "undated": 0.5, "ended": 0}[best] + (1 if any(CO[c["k"]]["t"] == "biz" for c in cos) else 0)
+                CF.append({"mp": i, "law": L_["id"], "ns": L_["ns"], "tp": sorted({t for c in cos for t in c["tp"]}), "sp": w["sp"], "n": w["n"], "acc": w["acc"],
+                           "co": cos, "st": best, "sc": sc})
+    CF.sort(key=lambda c: -c["sc"])
+    # ---- footprint score: who copied whom matters more when the source is business, came first, and the text passed
+    cf_pairs = {(c["mp"], c["law"]) for c in CF}
+    for f in FP:
+        f["sc"] = ((3 if f["tier"] == "strong" else 1) + {"business": 3, "professional": 2, "civil": 1}.get(f["ot"], 0)
+                   + (2 if f["order"] == "opinion_first" else 0) + {"supported": 2, "supported_in_principle": 1.5, "partly_supported": 1.5}.get(f["o"], 0)
+                   + (1 if f["cov"] >= 0.6 else 0) + (2 if any((i, f["law"]) in cf_pairs for i in f["ids"]) else 0))
+    order = sorted(range(len(FP)), key=lambda k: (FP[k]["tier"] != "strong", -FP[k]["sc"], -FP[k]["w"]))
+    remap = {old: new for new, old in enumerate(order)}      # people and organisations point at footprints by index
+    FP[:] = [FP[o] for o in order]
+    for m in mps.values():
+        m["fp"] = sorted(remap[k] for k in m["fp"])
+    for o in ORG:
+        o["fp"] = sorted(remap[k] for k in o["fp"])
+
     # ---- groups per assembly
     GR = []
     for ns in NS_ORDER:
@@ -304,9 +367,11 @@ def main():
         "inadm": sum(p["o"] == "inadmissible_out_of_scope" for p in P),
         "shl": dict(collections.Counter((m.get("sh") or {}).get("s", "none") for m in mps.values())),
         "co": len(CO), "co_shared": sum(1 for c in CO if len(c["m"]) > 1), "co_org": sum(1 for c in CO if "o" in c),
+        "cf": len(CF), "cf_mps": len({c["mp"] for c in CF}), "cf_st": dict(collections.Counter(c["st"] for c in CF)),
         "asm": len(ASM), "from": ASM[-1]["start"], "updated": __import__("datetime").date.today().isoformat(), "contact": __import__("os").environ.get("LT_CONTACT", ""),
     }
-    data = {"stats": stats, "asm": ASM, "laws": LAWS, "mps": mps, "groups": GR, "orgs": ORG, "fp": FP, "echo": EC, "co": CO}
+    data = {"stats": stats, "asm": ASM, "laws": LAWS, "mps": mps, "groups": GR, "orgs": ORG, "fp": FP, "echo": EC, "co": CO, "cf": CF,
+            "topics": {k: {"bg": bg, "en": en} for k, (bg, en) in topics.LABELS.items()}}
     SITE.mkdir(exist_ok=True)
     for ns, d in DETAIL.items():
         (SITE / f"detail-{ns}.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
