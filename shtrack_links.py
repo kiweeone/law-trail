@@ -35,7 +35,7 @@ def level(pid, name, prev):
     if st in ("matched", "ambiguous"):
         return {"s": st, "g": prev["guid"]}
     rows = shtrack.parse_rows(name)
-    if st == "error":
+    if st in (None, "error"):          # never looked up (a new MP) or the lookup failed
         r = shtrack.match_mp(name)
         if r["status"] in ("matched", "ambiguous"):
             return {"s": r["status"], "g": r["guid"]}

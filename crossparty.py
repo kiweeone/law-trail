@@ -12,11 +12,12 @@ def shingles(t):
     return {" ".join(w[i:i + N]) for i in range(len(w) - N + 1)}
 
 
-def main():
-    laws = json.loads((HERE / "laws.json").read_text(encoding="utf-8"))
+def main(only=None, laws=None, write=True):
+    """Cross-group pairs for every law, or only for the idMat values in `only` (returned, not merged)."""
+    laws = laws if laws is not None else json.loads((HERE / "laws.json").read_text(encoding="utf-8"))
     out = []
     for l in laws:
-        if not l.get("bill_id") or not l.get("second_reading"):
+        if not l.get("bill_id") or not l.get("second_reading") or (only is not None and l["idMat"] not in only):
             continue
         text, _ = extract.report_for(pbg.bill(l["bill_id"]))
         heads = list(extract.HEAD.finditer(text))
@@ -44,7 +45,8 @@ def main():
                             "b": {"who": b["who"], "grp": sorted(b["grp"]), "out": b["out"]},
                             "text": re.sub(r"\s+", " ", a["body"])[:500]})
     out.sort(key=lambda e: -e["shared"])
-    (HERE / "crossparty.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    if write and only is None:
+        (HERE / "crossparty.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
 
 

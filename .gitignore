@@ -11,3 +11,6 @@ shtrack_home.html
 footprints_old.json
 footprints_52.json
 laws_52.json
+# rebuilt on every run
+site_data.json
+migrate_state.py

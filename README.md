@@ -1,6 +1,23 @@
-# Law Trail prototype
+# Law Trail
 
-Traces Bulgarian laws from the State Gazette back to their bills, sponsors and second-reading amendments.
+Who shapes Bulgarian laws: every law from the State Gazette traced to its bill, its amendments, the opinions filed on it
+and the MPs' company ties. Live at https://law-trail.vercel.app
+
+## Updating
+
+`python3 update.py` finds newly promulgated laws of the sitting assembly, processes only those, merges them into the data
+files and rebuilds `deploy/`. It starts from an empty cache; everything it needs about older laws is in the JSON files here.
+It fails without publishing if a source is down or the result fails its checks.
+
+`.github/workflows/update.yml` runs it every Monday and commits the result; Vercel redeploys on the push.
+Run it by hand from the Actions tab ("Update data" → Run workflow). Mode `selftest` forgets the two newest laws, rebuilds
+them from the live sources and compares with the stored data, without changing anything. `UPDATES.md` logs every run.
+
+Needs: Python 3, `pdftotext`/`pdftoppm` (poppler-utils), `pandoc`, `tesseract` with Bulgarian (`tesseract-ocr-bul`).
+
+## First build (history)
+
+The sections below describe how the data was first assembled.
 
 ## Run
 

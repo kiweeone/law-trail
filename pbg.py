@@ -28,6 +28,29 @@ def cached(name, fn):
     return d
 
 
+def fresh(name, fn):
+    """Fetch now and overwrite the cached copy (used by the scheduled update, where stale data would hide changes)."""
+    d = fn()
+    if d is not None:
+        (RAW / f"{name}.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+    return d
+
+
+def bill_fresh(i):
+    return fresh(f"bill_{i}", lambda: _req(f"{API}/bill/{i}"))
+
+
+def get_fresh(path):
+    return fresh(path.strip("/").replace("/", "_"), lambda: _req(f"{API}/{path.strip('/')}"))
+
+
+def bills_search(date1, date2):
+    """Uncached bill search for the current assembly."""
+    q = {"A_ns_id": "", "L_Ses_id": "", "A_ns_C_id": "", "A_ns_MP_id": "", "L_Act_string": "",
+         "L_Act_sign": "", "date1": date1, "date2": date2, "Pr_id": "", "impMin": ""}
+    return _req(f"{API}/fn-bills", q)
+
+
 def bills(date1, date2):
     q = {"A_ns_id": "", "L_Ses_id": "", "A_ns_C_id": "", "A_ns_MP_id": "", "L_Act_string": "",
          "L_Act_sign": "", "date1": date1, "date2": date2, "Pr_id": "", "impMin": ""}

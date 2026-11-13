@@ -191,18 +191,27 @@ def first_reading_attendees(bill):
     return m.group(1).strip() if m else ""
 
 
-def main():
-    laws = json.loads((HERE / "laws.json").read_text(encoding="utf-8"))
-    ops = json.loads((HERE / "opinions.json").read_text(encoding="utf-8"))
-    by_bill = collections.defaultdict(list)
+def with_text(ops):
+    """Opinion records with their extracted text and normalised organisation (copies; the stored records stay as they are)."""
+    out = []
     for o in ops:
         f = OPN / (o["path"].rsplit("/", 1)[-1] + ".txt")
-        o["text"] = f.read_text(encoding="utf-8") if f.exists() else ""
-        o["org"], o["org_type"] = org_name(o["org"])
+        on, ot = org_name(o["org"])
+        out.append({**o, "text": f.read_text(encoding="utf-8") if f.exists() else "", "org": on, "org_type": ot})
+    return out
+
+
+def main(only=None, laws=None, ops=None, write=True):
+    """Footprints for every law, or only for the laws whose idMat is in `only` (returned, not merged)."""
+    laws = laws if laws is not None else json.loads((HERE / "laws.json").read_text(encoding="utf-8"))
+    ops = ops if ops is not None else json.loads((HERE / "opinions.json").read_text(encoding="utf-8"))
+    by_bill = collections.defaultdict(list)
+    want = None if only is None else {l.get("bill_id") for l in laws if l["idMat"] in only}
+    for o in with_text([o for o in ops if want is None or o["bill_id"] in want]):
         by_bill[o["bill_id"]].append(o)
     footprints = []
     for law in laws:
-        if not law.get("bill_id"):
+        if not law.get("bill_id") or (only is not None and law["idMat"] not in only):
             continue
         b = pbg.bill(law["bill_id"])
         extract.CTX.update(ns=law.get("ns"), date=((law.get("second_reading") or {}).get("report_date") or "9999")[:10])
@@ -238,8 +247,9 @@ def main():
                         "run_words": n, "passage": passage[:500], "proposal": re.sub(r"\s+", " ", p["body"]).strip()[:500],
                     })
     footprints.sort(key=lambda f: (-f["run_words"], -f["coverage"]))
-    (HERE / "laws.json").write_text(json.dumps(laws, ensure_ascii=False, indent=1), encoding="utf-8")
-    (HERE / "footprints.json").write_text(json.dumps(footprints, ensure_ascii=False, indent=1), encoding="utf-8")
+    if write and only is None:
+        (HERE / "laws.json").write_text(json.dumps(laws, ensure_ascii=False, indent=1), encoding="utf-8")
+        (HERE / "footprints.json").write_text(json.dumps(footprints, ensure_ascii=False, indent=1), encoding="utf-8")
     return laws, footprints
 
 

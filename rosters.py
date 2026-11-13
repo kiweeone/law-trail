@@ -74,6 +74,45 @@ def _load():
             p.write_text(json.dumps({"names": _NAMES, "members": _MEMBERS}, ensure_ascii=False), encoding="utf-8")
 
 
+def current():
+    """Folder number of the sitting assembly."""
+    return max(ASSEMBLIES, key=int)
+
+
+def refresh(ns=None):
+    """Re-read the sitting assembly's roster: new MPs become resolvable, today's group memberships are recorded.
+
+    Memberships that were open at the last look and are gone now are closed with today's date, so a past
+    proposal still resolves to the group its author sat in then. Returns the current MP ids.
+    """
+    global _NAMES, _MEMBERS
+    _load()
+    ns = ns or current()
+    a, today = ASSEMBLIES[ns], dt.date.today().isoformat()
+    mps = pbg.get_fresh(f"fn-mps/bg/{a['id']}")
+    snap = pbg.get_fresh(f"coll-list-ns/bg?nsId={a['id']}&date={today}")
+    if not mps or not (snap or {}).get("colListMP"):
+        raise RuntimeError("parliament.bg returned no MP roster")
+    idx = _NAMES.setdefault(ns, {})
+    for m in mps:
+        full = _norm(m["A_ns_MP_short_name"])
+        parts = full.split()
+        idx[full] = m["A_ns_MP_id"]
+        if len(parts) >= 3:
+            idx.setdefault(f"{parts[0]} {parts[-1]}", m["A_ns_MP_id"])
+    now = {(m["A_ns_MP_id"], m["A_ns_CL_value_short"], m["A_ns_MSP_date_F"], m["A_ns_MSP_date_T"], ns,
+            " ".join(m[f"A_ns_MPL_Name{i}"] for i in (1, 2, 3)).title()) for m in snap["colListMP"]}
+    open_now = {(r[0], r[1], r[2]) for r in now}
+    kept = []
+    for r in _MEMBERS:
+        if r[4] == ns and r[3].startswith("9999") and (r[0], r[1], r[2]) not in open_now:
+            r = (r[0], r[1], r[2], today, r[4], r[5])           # was open, is gone: close it today
+        kept.append(tuple(r))
+    _MEMBERS = sorted(set(kept) | now)
+    (HERE / "rosters.json").write_text(json.dumps({"names": _NAMES, "members": _MEMBERS}, ensure_ascii=False), encoding="utf-8")
+    return sorted({m["A_ns_MP_id"] for m in mps})
+
+
 def resolve(name, ns):
     _load()
     key = _norm(name)

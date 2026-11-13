@@ -4,7 +4,7 @@ The page carries summaries; amendment texts and before/after diffs go to one det
 (site/detail-<ns>.json), fetched when a law is opened.
 """
 import collections, json, pathlib, re
-import pbg, rosters, influence, topics
+import pbg, rosters, influence, topics, state
 
 _BIZ = re.compile(r"(?<![А-ЯA-Z])(?:Е?ООД|Е?АД|ЕТ|КД|КДА|СД|ЕООД|EOOD|OOD|AD|EAD|ET)(?![А-ЯA-Z])|КООПЕРАЦИЯ|LTD|GMBH")
 _STATE1 = re.compile(r"ДЪРЖАВНО ПРЕДПРИЯТИЕ|МИНИСТЕРСТВО|^ОБЩИНА|(?:ИЗПЪЛНИТЕЛНА|ДЪРЖАВНА|НАЦИОНАЛНА) АГЕНЦИЯ|АГЕНЦИЯ (?:ЗА|ПО)|ДЪРЖАВЕН|ДИРЕКЦИЯ|ПРОКУРАТУРА|ОБЛАСТНА АДМИНИСТРАЦИЯ|ИНСПЕКЦИЯ|НАРОДНА БАНКА|КОМИСИЯ (?:ЗА|ПО)|^СМЕТНА ПАЛАТА|ОМБУДСМАН|ДЪРЖАВАТА|ИЗБИРАТЕЛНА КОМИСИЯ|НАЦИОНАЛНО БЮРО")
@@ -62,6 +62,8 @@ def iso_dv(d):
 def journey(l):
     if not l.get("bill_id"):
         return None
+    if l.get("tl"):
+        return l["tl"]          # stored when the law was first processed, so a rebuild needs no network
     b = pbg.bill(l["bill_id"])
     act = b.get("activity") or []
     second = [a["L_Act_St_date"] for a in act if a.get("L_Act_St_date") and a.get("L_Act_St2_name") == "зала второ гласуване" and a.get("L_Act_St_name") == "приет"]
@@ -83,9 +85,7 @@ def main():
     law_ns = {l["idMat"]: l["ns"] for l in laws}
 
     # ---- every bill sponsored in these assemblies (current search + past enumeration)
-    cur_bills = [b["L_Act_id"] for b in pbg.bills("2026-04-01", "2026-11-04")]
-    past_bills = [b["id"] for b in json.loads((HERE / "backfill_bills.json").read_text(encoding="utf-8")) if b["ns"] in set(NS_ORDER)]
-    all_bills = [d for d in (pbg.bill(i) for i in dict.fromkeys(cur_bills + past_bills)) if d]
+    all_bills = state.load(state.BILLS, [])
 
     # ---- MPs across assemblies, with the group they sat in for each assembly
     member_as = collections.defaultdict(dict)  # id -> ns -> (date_T, group)
@@ -99,7 +99,8 @@ def main():
             ids.update(p["mp_ids"])
         ids.update(s["id"] for s in l.get("sponsors_mp", []))
     # parliament.bg ids are per mandate; merge mandates into people by full name + date of birth
-    prof = {i: (pbg.get(f"mp-profile/bg/{i}") or {}) for i in ids}
+    stored = state.load(state.PROFILES, {})
+    prof = {i: stored[str(i)] if str(i) in stored else state.compact_profile(pbg.get(f"mp-profile/bg/{i}") or {}) for i in ids}
     def person_key(i):
         p = prof[i]
         nm = " ".join(p.get(f"A_ns_MPL_Name{k}", "") for k in (1, 2, 3)).strip().upper() or (rosters.mp_name(i) or "").upper()
@@ -122,19 +123,16 @@ def main():
         for m in mids:
             as_.update({ns: v[1] for ns, v in member_as.get(m, {}).items()})
         latest = next((ns for ns in NS_ORDER if ns in as_), None)
-        coms = [{"c": m["A_ns_CL_value"], "r": m["A_ns_MP_PosL_value"].strip()} for m in p.get("mshipList") or []
-                if m["A_ns_MSP_date_T"].startswith("9999") and re.match(r"(Временна )?[Кк]омисия", m["A_ns_CL_value"])]
+        coms = [{"c": m["A_ns_CL_value"], "r": m["A_ns_MP_PosL_value"].strip()} for m in p.get("mshipList") or []]
         name = " ".join(p.get(f"A_ns_MPL_Name{k}", "") for k in (1, 2, 3)).title().strip() or rosters.mp_name(i) or f"#{i}"
         mps[i] = {"id": i, "n": name, "as": as_, "g": as_.get(latest, ""), "ns": latest, "mand": sorted(mids),
                   "va": (p.get("A_ns_Va_name") or "").split("-", 1)[-1].title(),
                   "prof": ", ".join(x["A_ns_MP_Pr_TL_value"] for x in p.get("prsList") or []),
                   "coms": coms, "bills": [], "props": [], "fp": [], "echo": []}
     for d in all_bills:
-        status = "promulgated" if d.get("L_Act_dv_iss") else ("withdrawn" if d.get("withdrawn") else "pending")
-        for m in d.get("imp_list") or []:
-            if pid(m["A_ns_MP_id"]) in mps:
-                mps[pid(m["A_ns_MP_id"])]["bills"].append({"t": d["L_ActL_title"], "d": d["L_Act_date"][:10], "st": status,
-                                                      "ns": str(d.get("A_ns_folder") or ""), "u": f"https://www.parliament.bg/bg/bills/ID/{d['L_Act_id']}"})
+        for i in d["imp"]:
+            if pid(i) in mps:
+                mps[pid(i)]["bills"].append({"t": d["t"], "d": d["d"], "st": d["st"], "ns": d["ns"], "u": f"https://www.parliament.bg/bg/bills/ID/{d['id']}"})
     for law in laws:
         for k, p in enumerate((law.get("second_reading") or {}).get("proposals", [])):
             for i in {pid(x) for x in p["mp_ids"]}:
@@ -340,10 +338,7 @@ def main():
     ASM = [{"ns": ns, "name": rosters.ASSEMBLIES[ns]["name"], "start": rosters.ASSEMBLIES[ns]["start"],
             "end": rosters.ASSEMBLIES[ns]["end"], "laws": sum(1 for l in laws if l["ns"] == ns)} for ns in NS_ORDER]
     P = [p for l in LAWS for p in l["props"]]
-    readable = 0
-    for o in ops:
-        t = HERE / "raw" / "opinions" / (o["path"].rsplit("/", 1)[-1] + ".txt")
-        readable += t.exists() and len(t.read_text(encoding="utf-8").strip()) > 300
+    readable = sum(1 for o in ops if (o.get("chars") or 0) > 300)   # text length recorded when the opinion was read
     stats = {"laws": len(LAWS), "props": len(P), "acc": sum(p["o"] in OK for p in P), "resolved": sum(1 for p in P if p["ids"]),
              "opinions": len(ops), "readable": readable, "orgs": len(ORG), "fp_strong": sum(1 for f in FP if f["tier"] == "strong"),
              "fp": len(FP), "other": sum(len(l["other"]) for l in LAWS), "mps": len(mps), "bills": len(all_bills),

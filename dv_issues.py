@@ -2,12 +2,15 @@
 import html, json, pathlib, re, sys, time, urllib.request, concurrent.futures as cf
 HERE = pathlib.Path(__file__).parent
 RAW = HERE / "raw" / "dvidx"
+RAW.mkdir(parents=True, exist_ok=True)
 URL = "https://dv.parliament.bg/DVWeb/materiali.faces?idObj={}"
-ROW = re.compile(r"\|([^|]{3,80})\|([^|]{6,600})\|\s*стр\.\s*\d+\s*<a[^>]+idMat=(\d+)")
+# the page number ("стр. 3") is missing while an issue is fresh, so it is optional
+ROW = re.compile(r"\|([^|]{3,80})\|([^|]{6,600})\|\s*(?:стр\.\s*\d+\s*)?<a[^>]+idMat=(\d+)")
 
-def fetch(o):
+def fetch(o, fresh=False):
+    """Contents page of one gazette object. Recent pages change after publication, so the update re-reads them (fresh=True)."""
     p = RAW / f"{o}.html"
-    if p.exists():
+    if p.exists() and not fresh:
         return p.read_text(encoding="utf-8", errors="replace")
     for a in range(3):
         try:

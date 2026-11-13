@@ -135,13 +135,14 @@ def norm(s):
     return re.sub(r"[^\wа-я]+", " ", s.lower()).strip()
 
 
-def run():
-    laws = json.loads((HERE / "laws.json").read_text(encoding="utf-8"))
-    fps = json.loads((HERE / "footprints.json").read_text(encoding="utf-8"))
+def run(only=None, laws=None, fps=None, write=True):
+    """Before/after blocks for every law, or only for the idMat values in `only` (returned keyed by str(idMat), not merged)."""
+    laws = laws if laws is not None else json.loads((HERE / "laws.json").read_text(encoding="utf-8"))
+    fps = fps if fps is not None else json.loads((HERE / "footprints.json").read_text(encoding="utf-8"))
     out, stats = {}, {"blocks": 0, "reworded": 0, "found_in_dv": 0, "checked": 0}
     import dv
     for l in laws:
-        if not l.get("bill_id") or not l.get("second_reading"):
+        if not l.get("bill_id") or not l.get("second_reading") or (only is not None and l["idMat"] not in only):
             continue
         text, _ = extract.report_for(pbg.bill(l["bill_id"]))
         blocks = attach_proposals(parse(text), text, l["second_reading"]["proposals"])
@@ -166,8 +167,9 @@ def run():
                               and " ".join(f["passage"].split()[:10]) in na})
             stats["blocks"] += 1
             stats["reworded"] += b["kind"] in ("reworded", "new")
-        out[l["idMat"]] = blocks
-    (HERE / "diffs.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+        out[str(l["idMat"])] = blocks
+    if write and only is None:
+        (HERE / "diffs.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
     return out, stats
 
 

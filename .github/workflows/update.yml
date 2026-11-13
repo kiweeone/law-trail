@@ -1,0 +1,52 @@
+name: Update data
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"        # Mondays 04:23 UTC (06:23 or 07:23 in Sofia)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "update = fetch new laws and publish · selftest = prove the pipeline works, change nothing"
+        type: choice
+        options: [update, selftest]
+        default: update
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install text tools (PDF text, Word text, Bulgarian OCR)
+        run: sudo apt-get update -q && sudo apt-get install -y -q poppler-utils pandoc tesseract-ocr tesseract-ocr-bul
+
+      - name: Self-test (changes nothing)
+        if: inputs.mode == 'selftest'
+        run: python3 update.py --selftest 2
+
+      - name: Find and process new laws
+        id: update
+        if: inputs.mode != 'selftest'
+        run: python3 update.py
+
+      - name: Publish (Vercel redeploys on push)
+        if: inputs.mode != 'selftest'
+        run: |
+          git config user.name "kiweeone"
+          git config user.email "kiweeone@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Nothing changed."; exit 0; fi
+          git commit -m "Data update $(date -u +%F): ${{ steps.update.outputs.new_laws }} new laws"
+          git push
