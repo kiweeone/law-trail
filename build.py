@@ -394,7 +394,10 @@ def deploy(page, stats):
             '<meta property="og:title" content="Law Trail">\n'
             f'<meta property="og:description" content="{desc}">\n'
             '<meta property="og:type" content="website">\n'
-            f'<link rel="icon" href="{icon}">\n')
+            f'<link rel="icon" href="{icon}">\n'
+            # Vercel Web Analytics (cookie-free page views); only in the hosted site, not the Claude preview
+            '<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>\n'
+            '<script defer src="/_vercel/insights/script.js"></script>\n')
     head = head.replace('<meta name="claude:viewport-fit-sides" content="cover">\n', "")
     (out / "index.html").write_text(meta + head + "</style>\n</head>\n<body>" + body + "\n</body>\n</html>\n", encoding="utf-8")
     for f in SITE.glob("detail-*.json"):
