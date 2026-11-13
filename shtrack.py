@@ -3,7 +3,7 @@ import html, json, pathlib, re, time, urllib.parse, urllib.request
 
 RAW = pathlib.Path(__file__).parent / "raw" / "shtrack"
 RAW.mkdir(parents=True, exist_ok=True)
-UA = {"User-Agent": "LawTrail/1.0 (+https://law-trail.vercel.app)"}
+UA = {"User-Agent": "LawTrail/1.0 (+https://www.lawtrail.eu)"}
 
 
 def get(url, name):

@@ -1,7 +1,7 @@
 # Law Trail
 
 Who shapes Bulgarian laws: every law from the State Gazette traced to its bill, its amendments, the opinions filed on it
-and the MPs' company ties. Live at https://law-trail.vercel.app
+and the MPs' company ties. Live at https://www.lawtrail.eu
 
 ## Updating
 

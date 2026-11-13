@@ -402,6 +402,8 @@ def deploy(page, stats):
             '<meta property="og:title" content="Law Trail">\n'
             f'<meta property="og:description" content="{desc}">\n'
             '<meta property="og:type" content="website">\n'
+            '<meta property="og:url" content="https://www.lawtrail.eu/">\n'
+            '<link rel="canonical" href="https://www.lawtrail.eu/">\n'
             f'<link rel="icon" href="{icon}">\n'
             # Vercel Web Analytics (cookie-free page views); only in the hosted site, not the Claude preview
             '<script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>\n'

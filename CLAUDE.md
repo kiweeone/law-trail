@@ -4,7 +4,7 @@ Public tool that traces Bulgarian laws from the State Gazette (ДВ) to their bi
 amended them, what passed, which organisations filed opinions and where their wording ended up, and MPs' company ties
 (ЩРАК / Commercial Register). Covers the 47th–52nd National Assemblies (Dec 2021 →). Owner: kiweeone.
 
-- Live: https://law-trail.vercel.app (Vercel, deploys every push to `main`; output folder `deploy/`, see `vercel.json`)
+- Live: https://www.lawtrail.eu (also law-trail.vercel.app; Vercel, deploys every push to `main`; output folder `deploy/`, see `vercel.json`)
 - Weekly data update: `.github/workflows/update.yml` runs `update.py` on Mondays and commits; `UPDATES.md` logs runs.
   Manual run: Actions → Update data → Run workflow (mode `selftest` changes nothing).
 
