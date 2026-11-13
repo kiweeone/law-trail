@@ -29,6 +29,25 @@ def gazette_match(bill, index):
     return None, cands[0][0] if cands else 0
 
 
+def merge_originals(law, b):
+    """A common bill (общ законопроект) has no sponsor of its own: credit the sponsors of the bills merged into it."""
+    import state
+    orig = state.originals(b)
+    if not orig:
+        law.pop("merged_from", None)
+        return law
+    law["merged_from"] = [{"id": d["L_Act_id"], "sign": d["L_Act_sign"], "date": (d.get("L_Act_date") or "")[:10],
+                           "mp": [m["A_ns_MP_id"] for m in d.get("imp_list") or []], "cab": bool(d.get("imp_list_min"))} for d in orig]
+    seen = {s["id"] for s in law.get("sponsors_mp", [])}
+    for d in orig:
+        for m in d.get("imp_list") or []:
+            if m["A_ns_MP_id"] not in seen:
+                seen.add(m["A_ns_MP_id"])
+                law["sponsors_mp"].append({"id": m["A_ns_MP_id"], "name": " ".join(m[f"A_ns_MPL_Name{i}"] for i in (1, 2, 3)).title()})
+        law["sponsor_cabinet"] = law.get("sponsor_cabinet") or bool(d.get("imp_list_min"))
+    return law
+
+
 def enrich(law, b, ns):
     """Same fields as extract.main(), with names resolved inside the right assembly."""
     sr_meta = (b.get("stan_list2_1") or [{}])[-1]
@@ -40,6 +59,7 @@ def enrich(law, b, ns):
     law["sponsors_mp"] = [{"id": m["A_ns_MP_id"], "name": " ".join(m[f"A_ns_MPL_Name{i}"] for i in (1, 2, 3)).title()}
                           for m in b.get("imp_list") or []]
     law["sponsor_cabinet"] = bool(b.get("imp_list_min"))
+    merge_originals(law, b)
     law["committees"] = [(d["A_ns_CL_value"], d["L_Act_DTL_value"]) for d in b.get("dist_list") or []]
     law["stakeholder_opinions"] = [s["A_Cm_Stan_sub"] for s in b.get("standp_list") or []]
     law["bill_url"] = f"https://www.parliament.bg/bg/bills/ID/{b['L_Act_id']}"

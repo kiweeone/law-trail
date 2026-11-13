@@ -139,7 +139,7 @@ main{padding-block:24px 64px}
 
 /* pills */
 .pill{display:inline-block;font:500 11.5px/1 var(--body);padding:4px 8px;border-radius:999px;white-space:nowrap}
-.o-supported,.o-supported_in_principle,.o-partly_supported,.st-promulgated{background:var(--ok-soft);color:var(--ok)}
+.o-supported,.o-supported_in_principle,.o-partly_supported,.st-promulgated,.st-merged{background:var(--ok-soft);color:var(--ok)}
 .o-rejected{background:var(--bad-soft);color:var(--bad)}
 .o-inadmissible_out_of_scope,.or-added_at_second_reading,.t-strong,.ord-opinion_first{background:var(--warn-soft);color:var(--warn)}
 .o-withdrawn,.o-unclear,.st-withdrawn,.or-unclear,.or-not_found_in_report,.or-no_report,.t-partial,.ord-unclear,.st-pending,.or-in_bill_as_introduced{background:var(--bg);color:var(--muted)}
@@ -608,7 +608,7 @@ const DICT = {
       TIER:{strong:"силен",partial:"частичен"},
       ORI:{added_at_second_reading:"добавено на второ четене",in_bill_as_introduced:"в първоначалния законопроект",unclear:"неясен произход",not_found_in_report:"не е в доклада",no_report:"няма доклад"},
       ORD:{opinion_first:"становището е първо",unclear:"редът е неясен"},
-      ST:{promulgated:"закон",pending:"висящ",withdrawn:"оттеглен"},
+      ST:{promulgated:"закон",merged:"закон, чрез общ законопроект",pending:"висящ",withdrawn:"оттеглен"},
       OTYPE:[["business","Бизнес и браншови организации"],["union","Синдикати"],["professional","Професионални организации"],["public","Държавни институции"],["civil","Граждански организации и лица"]],
       KIND:{unchanged:"без промяна",reworded:"променен",tweaked:"техническа редакция",new:"нов",deleted:"отпаднал",other:"друго"},
       SHORT:{business:"Бизнес",union:"Синдикати",professional:"Професионални",public:"Държавни",civil:"Граждански"},
@@ -617,7 +617,7 @@ const DICT = {
       TIER:{strong:"strong",partial:"partial"},
       ORI:{added_at_second_reading:"added at second reading",in_bill_as_introduced:"in the bill as filed",unclear:"origin unclear",not_found_in_report:"not in the report",no_report:"no report"},
       ORD:{opinion_first:"opinion came first",unclear:"order unclear"},
-      ST:{promulgated:"law",pending:"pending",withdrawn:"withdrawn"},
+      ST:{promulgated:"law",merged:"law, via a merged bill",pending:"pending",withdrawn:"withdrawn"},
       OTYPE:[["business","Business and industry associations"],["union","Trade unions"],["professional","Professional bodies"],["public","State institutions"],["civil","Civil society and individuals"]],
       KIND:{unchanged:"unchanged",reworded:"reworded",tweaked:"technical edit",new:"new",deleted:"deleted",other:"other"},
       SHORT:{business:"Business",union:"Unions",professional:"Professional",public:"State",civil:"Civil society"},
@@ -1179,7 +1179,7 @@ function lawBody(l, det){
 }
 function mpView(id){
   const m = MP[id]; if (!m) return null;
-  const acc = m.props.filter(x=>OK.has(x.o)).length, law = m.bills.filter(b=>b.st==="promulgated").length;
+  const acc = m.props.filter(x=>OK.has(x.o)).length, law = m.bills.filter(b=>b.st==="promulgated"||b.st==="merged").length;
   const byLaw = {}; m.props.forEach(x=>{(byLaw[x.law] ||= []).push(x)});
   return {sec:"people", hash:"mp-"+id, make:()=>mpView(id), after:()=>{ const el=$("ego"); if (!el) return; const ks=new Set((m.co||[]).map(([k])=>k)); const ids=new Set([id]); ks.forEach(k=>CO[k].m.forEach(i=>ids.add(String(i)))); drawNet(el, graphFor([...ids], {ns:m.ns||Object.keys(m.as).sort().pop(), keep:k=>ks.has(k)}), {h:Math.min(340, 170+ks.size*12)}); },
    head:`<p class="kicker">${T("Депутат","MP")} · ${Object.keys(m.as).sort().reverse().map(ns=>`${NSO[ns]}: ${esc(gn(m.as[ns]))}`).join(" · ")}</p><h3 id="drawerTitle">${esc(nm(m.n))}</h3><div class="facts">${m.va?`<span>${esc(nm(m.va))}</span>`:""}${m.prof?`<span lang="bg">${esc(m.prof)}</span>`:""}</div>`,
@@ -1190,7 +1190,7 @@ function mpView(id){
    ${m.fp.length?`<div><p class="kicker">${T("Външен текст в предложенията","Outside text in the amendments")}</p><div class="grid">${m.fp.map(k=>fpCard(D.fp[k])).join("")}</div></div>`:""}
    ${m.coms.length?`<div><p class="kicker">${T("Комисии","Committees")}</p><ul lang="bg">${m.coms.map(c=>`<li>${esc(c.c)}${c.r!=="член"?` <span class="muted small">· ${esc(c.r)}</span>`:""}</li>`).join("")}</ul></div>`:""}
    <div><p class="kicker">${T("Предложения по обнародвани закони","Amendments to promulgated laws")}</p>${Object.keys(byLaw).length?`<ul>${Object.entries(byLaw).map(([lid,xs])=>{const c={};xs.forEach(x=>c[x.o]=(c[x.o]||0)+1);return `<li>${lawLink(+lid)}<span class="small">${Object.entries(c).map(([o,k])=>`<span class="pill o-${o}">${k} ${OUT[o]}</span>`).join(" ")}</span></li>`}).join("")}</ul>`:`<p class="empty">${T("Няма предложения по обнародвани закони.","No amendments to promulgated laws.")}</p>`}</div>
-   <div><p class="kicker">${T("Внесени законопроекти","Bills filed")}</p>${m.bills.length?`<ul>${[...m.bills].sort((a,b)=>b.d.localeCompare(a.d)).map(b=>`<li><a href="${esc(b.u)}" target="_blank" rel="noopener" lang="bg">${esc(b.t)}</a><span class="muted small">${NSO[b.ns]?nsLabel(b.ns)+" · ":""}${dt(b.d)} · <span class="pill st-${b.st}">${ST[b.st]}</span></span></li>`).join("")}</ul>`:`<p class="empty">${T("Няма.","None.")}</p>`}</div>`};
+   <div><p class="kicker">${T("Внесени законопроекти","Bills filed")}</p>${m.bills.length?`<ul>${[...m.bills].sort((a,b)=>b.d.localeCompare(a.d)).map(b=>`<li><a href="${esc(b.u)}" target="_blank" rel="noopener" lang="bg">${esc(b.t)}</a><span class="muted small">${NSO[b.ns]?nsLabel(b.ns)+" · ":""}${dt(b.d)} · <span class="pill st-${b.st}">${ST[b.st]}</span>${b.law&&LAW[b.law]?` → ${lawLink(b.law)}`:""}</span></li>`).join("")}</ul>`:`<p class="empty">${T("Няма.","None.")}</p>`}</div>`};
 }
 function orgView(i){
   const o = D.orgs[i]; if (!o) return null;
@@ -1211,7 +1211,8 @@ function lawPage(l){
   const tl = l.tl || {};
   const sponsor = l.cab && !l.sp.length ? T("Министерски съвет","Council of Ministers") : (l.spi.length ? l.spi.slice(0,3).map(i=>mpLink(i)).join(", ")+(l.spi.length>3?` +${l.spi.length-3}`:"") : "—");
   $("lpHero").innerHTML = `<p class="kick"><i></i>${T("Закон","Law")} · ${nsLong(l.ns)} · ${T("ДВ бр.","SG No.")} ${l.iss}${l.dvd?`, ${esc(dvd(l.dvd))}`:`/${l.dvy||""}`}</p><h1 id="lpTitle" lang="bg">${esc(l.t)}</h1>
-    <p>${T("Вносител","Sponsor")}: ${sponsor}${l.com.length?` · ${T("Водеща комисия","Lead committee")}: <span lang="bg">${esc(l.com[0])}</span>`:""}</p>
+    ${l.mf?`<p>${T(`Общ законопроект, изготвен от комисията на основата на ${l.mf.length} законопроекта, приети на първо четене:`,`A merged bill, drafted by the committee from ${l.mf.length} bills passed at first reading:`)} ${l.mf.map(m=>`<a href="https://www.parliament.bg/bg/bills/ID/${m.id}" target="_blank" rel="noopener">${esc(m.sign)}</a> (${m.cab&&!m.by.length?T("Министерски съвет","Council of Ministers"):m.by.slice(0,2).map(i=>mpLink(i)).join(", ")+(m.by.length>2?` +${m.by.length-2}`:"")})`).join("; ")}</p>`:""}
+    <p>${T(l.mf?"Вносители":"Вносител", l.mf?"Sponsors":"Sponsor")}: ${sponsor}${l.com.length?` · ${T("Водеща комисия","Lead committee")}: <span lang="bg">${esc(l.com[0])}</span>`:""}</p>
     <div class="links">${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">${T("Текст в ДВ ↗","Text in the State Gazette ↗")}</a>`:""}${l.bill?`<a href="${esc(l.bill)}" target="_blank" rel="noopener">${T("Законопроект","Bill")} ${esc(l.sign)} ↗</a>`:""}<button class="filterlink" data-setlaw="${l.id}">${T("Филтрирай всички изгледи по този закон","Filter all views by this law")}</button></div>`;
   const ST2 = [["sub",T("Внесен","Filed")],["r1c",T("Доклад на комисията (I)","Committee report (I)")],["r1",T("Приет на първо четене","Passed first reading")],["dl",T("Срок за предложения","Amendment deadline")],["r2c",T("Доклад на комисията (II)","Committee report (II)")],["r2",T("Приет на второ четене","Passed second reading")],["dv",T("Обнародван в ДВ","Promulgated")]];
   let last = null;

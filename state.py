@@ -22,7 +22,15 @@ def save(p, d):
 def compact_bill(d):
     return {"id": d["L_Act_id"], "ns": str(d.get("A_ns_folder") or ""), "t": d["L_ActL_title"], "d": (d.get("L_Act_date") or "")[:10],
             "st": "promulgated" if d.get("L_Act_dv_iss") else ("withdrawn" if d.get("withdrawn") else "pending"),
-            "imp": [m["A_ns_MP_id"] for m in d.get("imp_list") or []]}
+            "imp": [m["A_ns_MP_id"] for m in d.get("imp_list") or []],
+            **({"into": d["trans_list"][0]["L_Act_id"]} if d.get("trans_list") else {}),
+            **({"cab": True} if d.get("imp_list_min") else {})}
+
+
+def originals(b, getbill=None):
+    """Bills that were merged into this common bill (общ законопроект) after first reading."""
+    getbill = getbill or pbg.bill
+    return [d for d in (getbill(x["L_Act_id"]) for x in b.get("union_list") or []) if d]
 
 
 def compact_profile(p):
@@ -34,7 +42,9 @@ def compact_profile(p):
 
 
 def journey(l, b, first_reading_date):
-    """Dated steps of a law's path, from its bill record."""
+    """Dated steps of a law's path, from its bill record. A common bill starts with its originals: they were filed,
+    reported on and passed at first reading; the common bill only exists from the second reading on."""
+    orig = originals(b)
     act = b.get("activity") or []
     second = [a["L_Act_St_date"] for a in act if a.get("L_Act_St_date") and a.get("L_Act_St2_name") == "зала второ гласуване" and a.get("L_Act_St_name") == "приет"]
     st1 = [s["A_Cm_Stan_date"] for s in b.get("stan_list") or [] if s.get("A_Cm_Stan_date")]
@@ -44,6 +54,9 @@ def journey(l, b, first_reading_date):
         dd, mm, yy = (l.get("dv_date") or "").split("."); dv = f"{yy}-{int(mm):02d}-{int(dd):02d}"
     except Exception:
         dv = ""
-    return {"sub": (b.get("L_Act_date") or "")[:10], "r1c": min(st1) if st1 else "", "r1": first_reading_date(b),
+    if orig:
+        st1 = [s["A_Cm_Stan_date"] for o in orig for s in o.get("stan_list") or [] if s.get("A_Cm_Stan_date")] or st1
+    sub = min([(o.get("L_Act_date") or "")[:10] for o in orig if o.get("L_Act_date")] or [(b.get("L_Act_date") or "")[:10]])
+    return {"sub": sub, "r1c": min(st1) if st1 else "", "r1": first_reading_date(b),
             "dl": dl if dl[:4].isdigit() and dl[:4] != "0000" else "", "r2c": max(st2) if st2 else "",
             "r2": max(second) if second else (l.get("adopted") or ""), "dv": dv}

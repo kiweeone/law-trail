@@ -40,6 +40,20 @@ def opinions_for(bill):
     return out
 
 
+def for_law(b):
+    """Opinions on a law's bill and, for a common bill, on each bill merged into it (tagged with law_bill)."""
+    out = []
+    for o in opinions_for(b):
+        o["bill_id"] = b["L_Act_id"]
+        out.append(o)
+    for x in b.get("union_list") or []:
+        d = pbg.bill(x["L_Act_id"]) or {}
+        for o in opinions_for(d):
+            o["bill_id"], o["law_bill"] = x["L_Act_id"], b["L_Act_id"]
+            out.append(o)
+    return out
+
+
 def main(bill_ids):
     ops = []
     for bid in bill_ids:

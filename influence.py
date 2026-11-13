@@ -159,7 +159,11 @@ def first_reading_date(bill):
     """Date the plenary adopted the bill at first reading (from the bill's activity log)."""
     ds = [a["L_Act_St_date"] for a in bill.get("activity") or []
           if a.get("L_Act_St_date") and a.get("L_Act_St2_name") == "зала първо гласуване" and a.get("L_Act_St_name") == "приет"]
-    return min(ds) if ds else ""
+    if ds:
+        return min(ds)
+    orig = [pbg.bill(x["L_Act_id"]) or {} for x in bill.get("union_list") or []]
+    ds = [first_reading_date(o) for o in orig if o]
+    return max([d for d in ds if d] or [""])
 
 
 def proposal_bodies(bill):
@@ -207,8 +211,8 @@ def main(only=None, laws=None, ops=None, write=True):
     ops = ops if ops is not None else json.loads((HERE / "opinions.json").read_text(encoding="utf-8"))
     by_bill = collections.defaultdict(list)
     want = None if only is None else {l.get("bill_id") for l in laws if l["idMat"] in only}
-    for o in with_text([o for o in ops if want is None or o["bill_id"] in want]):
-        by_bill[o["bill_id"]].append(o)
+    for o in with_text([o for o in ops if want is None or o.get("law_bill", o["bill_id"]) in want]):
+        by_bill[o.get("law_bill", o["bill_id"])].append(o)     # opinions on merged originals count for the common bill's law
     footprints = []
     for law in laws:
         if not law.get("bill_id") or (only is not None and law["idMat"] not in only):

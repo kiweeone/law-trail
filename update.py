@@ -96,9 +96,8 @@ def make_law(b, index):
 
 def read_opinions(b):
     """Download the bill's opinions, extract text, OCR the scans. Returns (records, warnings)."""
-    ops, warn = opinions.opinions_for(b), []
+    ops, warn = opinions.for_law(b), []
     for o in ops:
-        o["bill_id"] = b["L_Act_id"]
         t = opinions.fetch_text(o["path"])
         pdf = opinions.RAW / o["path"].rsplit("/", 1)[-1]
         if len(t.strip()) <= 300 and pdf.suffix.lower() == ".pdf" and pdf.exists():
@@ -235,7 +234,7 @@ def run():
         new_ops += ops
     fps, diffs, pairs = analyse(new_laws, new_ops) if new_laws else ([], {}, [])
     for l in new_laws:
-        report["new"].append(law_line(l, sum(o["bill_id"] == l["bill_id"] for o in new_ops), sum(f["idMat"] == l["idMat"] for f in fps)))
+        report["new"].append(law_line(l, sum(o.get("law_bill", o["bill_id"]) == l["bill_id"] for o in new_ops), sum(f["idMat"] == l["idMat"] for f in fps)))
 
     new_people = refresh_people(new_laws)
     report["people"] = f"roster re-read, {len(new_people)} new profile(s)"
@@ -312,8 +311,8 @@ def selftest(n):
             "outcomes": ([p["outcome"] for p in osr], [p["outcome"] for p in nsr]),
             "authors": ([sorted(p["mp_ids"]) for p in osr], [sorted(p["mp_ids"]) for p in nsr]),
             "other laws changed": (len(old.get("pzr_other_laws") or []), len(law.get("pzr_other_laws") or [])),
-            "opinions": (sum(o["bill_id"] == old["bill_id"] for o in stored_ops), len(ops)),
-            "readable opinions": (sum(o["bill_id"] == old["bill_id"] and (o.get("chars") or 0) > 300 for o in stored_ops), sum(o["chars"] > 300 for o in ops)),
+            "opinions": (sum(o.get("law_bill", o["bill_id"]) == old["bill_id"] for o in stored_ops), len(ops)),
+            "readable opinions": (sum(o.get("law_bill", o["bill_id"]) == old["bill_id"] and (o.get("chars") or 0) > 300 for o in stored_ops), sum(o["chars"] > 300 for o in ops)),
             "footprints": (sum(f["idMat"] == old["idMat"] for f in stored_fp), len(fps)),
             "before/after blocks": (len(stored_diffs.get(str(old["idMat"]), [])), len(diffs.get(str(law["idMat"]), []))),
         }

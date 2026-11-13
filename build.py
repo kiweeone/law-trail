@@ -129,10 +129,16 @@ def main():
                   "va": (p.get("A_ns_Va_name") or "").split("-", 1)[-1].title(),
                   "prof": ", ".join(x["A_ns_MP_Pr_TL_value"] for x in p.get("prsList") or []),
                   "coms": coms, "bills": [], "props": [], "fp": [], "echo": []}
+    law_of_bill = {l["bill_id"]: l["idMat"] for l in laws if l.get("bill_id")}
     for d in all_bills:
+        # a bill merged into a common bill (общ законопроект) that became law did become law, through that bill
+        st, via = d["st"], law_of_bill.get(d.get("into"))
+        if st == "pending" and via is not None:
+            st = "merged"
         for i in d["imp"]:
             if pid(i) in mps:
-                mps[pid(i)]["bills"].append({"t": d["t"], "d": d["d"], "st": d["st"], "ns": d["ns"], "u": f"https://www.parliament.bg/bg/bills/ID/{d['id']}"})
+                mps[pid(i)]["bills"].append({"t": d["t"], "d": d["d"], "st": st, "ns": d["ns"], "u": f"https://www.parliament.bg/bg/bills/ID/{d['id']}",
+                                             **({"law": via} if st == "merged" else {})})
     for law in laws:
         for k, p in enumerate((law.get("second_reading") or {}).get("proposals", [])):
             for i in {pid(x) for x in p["mp_ids"]}:
@@ -202,7 +208,7 @@ def main():
         name, typ = influence.org_name(o["org"])
         if name == "(unnamed attachment)":
             continue
-        law = law_by_bill.get(o["bill_id"])
+        law = law_by_bill.get(o.get("law_bill", o["bill_id"]))
         if not law:
             continue
         org = orgs.setdefault(name, {"n": name, "t": typ, "filings": [], "fp": []})
@@ -226,7 +232,7 @@ def main():
     for o in ops:
         n, t = influence.org_name(o["org"])
         if n != "(unnamed attachment)":
-            ops_by_bill[o["bill_id"]].append({"org": n, "t": t, "d": o["date"], "u": "https://www.parliament.bg" + o["path"]})
+            ops_by_bill[o.get("law_bill", o["bill_id"])].append({"org": n, "t": t, "d": o["date"], "u": "https://www.parliament.bg" + o["path"]})
 
     # ---- laws: summary in the page, detail per assembly file
     LAWS, DETAIL = [], collections.defaultdict(dict)
@@ -240,12 +246,14 @@ def main():
             "ad": l.get("adopted"), "url": l["url"] if l["idMat"] and l["idMat"] > 0 else None,
             "bill": l.get("bill_url"), "sign": l.get("bill_sign"), "sp": [s["name"] for s in l.get("sponsors_mp", [])],
             "spi": list(dict.fromkeys(pid(s["id"]) for s in l.get("sponsors_mp", []))), "cab": l.get("sponsor_cabinet", False),
+            **({"mf": [{"id": m["id"], "sign": m["sign"], "by": list(dict.fromkeys(pid(i) for i in m["mp"])), "cab": m["cab"]}
+                       for m in l["merged_from"]]} if l.get("merged_from") else {}),
             "com": [c for c, r in l.get("committees", []) if r == "водеща"][:1],
             "other": [{"law": a["law"], "ch": a["chars"], "or": a.get("origin", "no_report"),
                        "by": [", ".join(p["proposers"][:3]) for p in a.get("proposed_by", [])]} for a in l["pzr_other_laws"]],
             "props": [{"ids": list(dict.fromkeys(pid(i) for i in p["mp_ids"])), "grp": [short_group(g) for g in p["groups"]], "o": p["outcome"], "pzr": p["in_pzr"],
                        **({} if p["mp_ids"] else {"who": p["proposers"][:4]})} for p in props],
-            "ops": ops_by_bill.get(l.get("bill_id"), []),
+            "ops": ops_by_bill.get(l.get("bill_id"), []),   # includes opinions on bills merged into it
             "tl": journey(l), "nbl": len(bl),
             "bk": dict(collections.Counter(b["kind"] for b in bl)),
         })
