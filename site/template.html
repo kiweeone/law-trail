@@ -403,6 +403,8 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
 @media (max-width:640px){.search{flex:1 1 calc(100% - 70px);order:2}.langbtn{order:2}.tabs{order:3}.sres{width:calc(100vw - 32px)}}
 
 /* ---------- manifesto links */
+.note.dispute a{color:inherit;font-weight:600}
+footer #footContact a{color:inherit;font-weight:600}
 .jumps{display:flex;flex-wrap:wrap;gap:10px}
 .jump.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule)}
 .jump.ghost:hover{border-color:var(--ink)}
@@ -580,6 +582,7 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
 <footer><div class="wrap">
   <span data-en="Sources: State Gazette (dv.parliament.bg); National Assembly (parliament.bg): bills, committee reports, MP profiles and opinions (scanned ones read with OCR); company ties from ЩРАК by BIRD.BG.">Източници: Държавен вестник (dv.parliament.bg); Народно събрание (parliament.bg): законопроекти, доклади на комисии, профили на депутати и становища (сканираните са разчетени с OCR); връзки с фирми от ЩРАК на BIRD.BG.</span>
   <span id="foot"></span>
+  <span id="footContact"></span>
 </div></footer>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -879,7 +882,12 @@ function render(){
   for (const [el,v] of [[fNs,F.ns],[fParty,F.party],[fType,F.type],[fLaw,F.law],[fSig,F.sig]]) { el.value=v; el.classList.toggle("set", !!v); }
   fClear.hidden = !(F.ns||F.party||F.type||F.law||F.sig);
 }
+// one corrections address, shown in the footer, in every MP and company panel and on the method page
+const CONTACT = (D.stats.m.contact || "").trim();
+const mailto = (subj) => `mailto:${encodeURIComponent(CONTACT).replace(/%40/g,"@")}?subject=${encodeURIComponent(subj)}`;
+const disputeLine = (what) => CONTACT ? `<p class="note dispute">${T("Грешка или възражение за тези данни?","An error in this data, or an objection?")} <a href="${mailto("Law Trail: "+what)}">${T("Пишете на","Write to")} ${esc(CONTACT)}</a></p>` : "";
 function footer(){ const s = D.stats;
+  $("footContact").innerHTML = CONTACT ? `${T("Грешка или възражение? Пишете на","Found an error or want to object? Write to")} <a href="${mailto("Law Trail")}">${esc(CONTACT)}</a>. ${T("Поправяме грешките при следващото обновяване.","Errors are fixed in the next update.")}` : "";
   $("foot").textContent = T(`Събрани са ${fmt(s.opinions)} становища, ${fmt(s.readable)} с четим текст. ${fmt(s.resolved)} от ${fmt(s.props)} предложения са свързани с депутат; ${s.sh} депутати са открити в ЩРАК. Съпоставянето е автоматично: прочетете източника, преди да разчитате на който и да е елемент. Данните са обновени на ${dt(s.m.updated)}.`,
     `${fmt(s.opinions)} opinions collected, ${fmt(s.readable)} with readable text. ${fmt(s.resolved)} of ${fmt(s.props)} amendments are linked to an MP; ${s.sh} MPs were found in ShTRAK. The matching is automatic: read the source before relying on any item. Data updated ${dt(s.m.updated)}. People and group names are transliterated; law titles, organisation names and quoted texts are in the original Bulgarian.`); }
 
@@ -1130,7 +1138,8 @@ function coView(k){
    html:`<div><p class="kicker">${T("Депутати с роля в","MPs with a role in")} ${T("тази организация","this entity")}</p><ul>${c.m.map(i=>{ const m=MP[i]; const r=(m.co.find(([kk])=>kk===k)||[])[1]||""; return `<li>${mpLink(i)}<span class="small muted">${Object.keys(m.as).sort().reverse().map(ns=>`${NSO[ns]}: ${esc(gn(m.as[ns]))}`).join(" · ")}</span><span class="small">${roleTxt(r)}${shLevel(m)==="name_only"?` · <span class="muted">${L.name_only}</span>`:""}</span></li>`; }).join("")}</ul></div>
    ${c.o!==undefined?`<div><p class="kicker">${T("Становища по законопроекти","Opinions on bills")}</p><p style="margin:0">${T("Същата организация е подавала становища:","The same entity has filed opinions:")} ${orgLink(D.orgs[c.o].n)}</p></div>`:""}
    <div class="links"><button class="filterlink" data-netco="${k}">${T("Покажи в мрежата на връзките","Show in the network")}</button><a href="https://shtrack.net/view/company/${encodeURIComponent(c.e)}/?bird_lang=bg" target="_blank" rel="noopener">${T("Отвори в ЩРАК ↗","Open in ShTRAK ↗")}</a></div>
-   <p class="note">${T("Ролите са по Търговския регистър и включват минали роли. Участието във фирма или организация само по себе си не е нарушение.","Roles come from the Commercial Register and include past roles. A role in a company or organisation is not wrongdoing in itself.")}</p>`};
+   <p class="note">${T("Ролите са по Търговския регистър и включват минали роли. Участието във фирма или организация само по себе си не е нарушение.","Roles come from the Commercial Register and include past roles. A role in a company or organisation is not wrongdoing in itself.")}</p>
+   ${disputeLine(c.n+" (ЕИК "+c.e+")")}`};
 }
 function mpTies(id){
   const m = MP[id], s = shLevel(m), co = m.co || [], L = SHL[LANG];
@@ -1149,6 +1158,7 @@ function mpTies(id){
     <p style="margin:6px 0 0"><span class="pill lv-${s}">${L[s]}</span> <span class="small">${why}</span></p>
     ${co.length?`<div class="egonet" id="ego"></div>
     <ul class="ties">${co.map(([k,r])=>`<li>${coLink(k)}<span class="small"><span class="pill ct-${CO[k].t}">${CTYPE[LANG][CO[k].t]}</span> ${roleTxt(r)}</span>${others(k).length?`<span class="small">${T("Също:","Also:")} ${others(k).map(i=>mpLink(i)).join(", ")}</span>`:""}${CO[k].o!==undefined?`<span class="small">${T("Подавала становища като","Filed opinions as")} ${orgLink(D.orgs[CO[k].o].n)}</span>`:""}</li>`).join("")}</ul>`:""}
+    ${disputeLine(m.n)}
     <div class="links" style="margin-top:10px">${co.length?`<button class="filterlink" data-netmp="${id}">${T("Отвори в мрежата на връзките","Open in the connections network")}</button>`:""}${link}</div></div>`;
 }
 

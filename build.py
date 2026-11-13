@@ -368,7 +368,7 @@ def main():
         "shl": dict(collections.Counter((m.get("sh") or {}).get("s", "none") for m in mps.values())),
         "co": len(CO), "co_shared": sum(1 for c in CO if len(c["m"]) > 1), "co_org": sum(1 for c in CO if "o" in c),
         "cf": len(CF), "cf_mps": len({c["mp"] for c in CF}), "cf_st": dict(collections.Counter(c["st"] for c in CF)),
-        "asm": len(ASM), "from": ASM[-1]["start"], "updated": __import__("datetime").date.today().isoformat(), "contact": __import__("os").environ.get("LT_CONTACT", ""),
+        "asm": len(ASM), "from": ASM[-1]["start"], "updated": __import__("datetime").date.today().isoformat(), "contact": __import__("os").environ.get("LT_CONTACT") or ((HERE / "contact.txt").read_text(encoding="utf-8").strip() if (HERE / "contact.txt").exists() else ""),
     }
     data = {"stats": stats, "asm": ASM, "laws": LAWS, "mps": mps, "groups": GR, "orgs": ORG, "fp": FP, "echo": EC, "co": CO, "cf": CF,
             "topics": {k: {"bg": bg, "en": en} for k, (bg, en) in topics.LABELS.items()}}

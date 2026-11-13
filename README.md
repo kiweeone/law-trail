@@ -50,4 +50,4 @@ Standard library only. Everything is cached under `raw/`, so reruns are fast.
 Vercel: import this repository, set **Root Directory** to `deploy`, framework **Other**, no build command.
 Custom domain: add it in Vercel → Domains, then in GoDaddy DNS add the CNAME record Vercel shows (for a subdomain, `cname.vercel-dns.com`).
 
-Optional: `LT_CONTACT=corrections@example.org python3 build.py` puts a corrections address on the "Как работи" page.
+The corrections address shown on the site is read from `contact.txt` (or the `LT_CONTACT` environment variable).
