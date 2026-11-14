@@ -400,6 +400,22 @@ svg.net text.cl{fill:var(--lnk-ink);font-weight:600}
 .langbtn:hover{border-color:var(--ink)}
 .themebtn{display:grid;place-items:center;width:36px;height:34px;padding:0;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:999px;cursor:pointer}
 .themebtn:hover{border-color:var(--ink)}
+.tldrbtn{font:700 12.5px/1 var(--mono);letter-spacing:.06em;background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:10px 13px;cursor:pointer;white-space:nowrap}
+.tldrbtn:hover{opacity:.85}
+@media (max-width:640px){.tldrbtn{order:2}}
+dialog.tldr{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 48px);padding:0;border:0;border-radius:var(--r-lg);background:var(--surface);color:var(--ink);box-shadow:0 24px 64px rgb(0 0 0 / .35)}
+dialog.tldr::backdrop{background:rgb(10 12 16 / .55)}
+dialog.tldr .tw{padding:clamp(20px,4vw,34px);display:grid;gap:18px}
+dialog.tldr .th{display:flex;align-items:start;gap:16px}
+dialog.tldr h2{font:700 clamp(22px,3vw,30px)/1.15 var(--display);letter-spacing:-.015em;margin:0;flex:1}
+dialog.tldr .sub{margin:-8px 0 0;color:var(--muted);font-size:14px}
+dialog.tldr ol{margin:0;padding:0;list-style:none;counter-reset:tl;display:grid;gap:4px}
+dialog.tldr li{counter-increment:tl;display:grid;grid-template-columns:34px minmax(0,1fr);gap:2px 12px;padding:12px 0;border-top:1px solid var(--rule)}
+dialog.tldr li::before{content:counter(tl);grid-row:span 3;font:700 15px/1 var(--mono);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--t);color:var(--i)}
+dialog.tldr li b{font:700 17px/1.3 var(--display)}
+dialog.tldr li p{margin:0;font-size:14.5px;line-height:1.5}
+dialog.tldr li .go{justify-self:start;margin-top:4px;background:none;border:0;padding:0;font:600 13.5px/1.4 var(--body);color:var(--i);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+dialog.tldr .tf{font-size:13px;color:var(--muted);margin:0}
 .themebtn svg{width:16px;height:16px}
 @media (max-width:640px){.themebtn{order:2}}
 @media (max-width:640px){.search{flex:1 1 calc(100% - 70px);order:2}.langbtn{order:2}.tabs{order:3}.sres{width:calc(100vw - 32px)}}
@@ -442,6 +458,7 @@ footer #footContact a{color:inherit;font-weight:600}
      aria-label="Търсене по име" data-en-aria="Search by name">
    <div class="sres" id="sres" role="listbox" hidden></div>
   </div>
+  <button class="tldrbtn" id="tldrBtn" type="button" aria-haspopup="dialog" aria-label="TL;DR: накратко за 30 секунди" data-en-aria="TL;DR: the short version in 30 seconds">TL;DR</button>
   <button class="themebtn" id="themeBtn" aria-label="Тъмен режим"></button>
   <button class="langbtn" id="langBtn" lang="en" aria-label="Switch to English">EN</button>
   <nav class="tabs" aria-label="Изгледи" data-en-aria="Views">
@@ -478,7 +495,7 @@ footer #footContact a{color:inherit;font-weight:600}
       <div><b data-en="Signals are leads">Сигналите са следи</b><span data-en="A signal is a reason to read the document. It is never proof of wrongdoing.">Сигналът е повод да прочетете документа. Той никога не е доказателство за нарушение.</span></div>
       <div><b data-en="Same rules for everyone">Еднакви правила за всички</b><span data-en="Every party, MP and organisation is measured with the same method.">Всяка партия, депутат и организация се оценява по един и същ метод.</span></div>
     </div>
-    <div class="jumps"><a class="jump" href="#lenses" data-en="To the data ↓">Към данните ↓</a><a class="jump ghost" href="#method" data-view="method" data-en="How it works and its limits">Как работи и какви са ограниченията</a></div>
+    <div class="jumps"><button class="jump" type="button" data-tldr="1" data-en="TL;DR in 30 seconds">TL;DR за 30 секунди</button><a class="jump ghost" href="#lenses" data-en="To the data ↓">Към данните ↓</a><a class="jump ghost" href="#method" data-view="method" data-en="How it works and its limits">Как работи и какви са ограниченията</a></div>
   </div>
 
   <div class="datahead"><h2 data-en="Start here">Първо вижте това</h2><span data-en="The strongest leads in the data, ranked by the same rules for everyone.">Най-силните следи в данните, подредени по едни и същи правила за всички.</span></div>
@@ -588,6 +605,7 @@ footer #footContact a{color:inherit;font-weight:600}
 </div></footer>
 
 <div class="scrim" id="scrim" hidden></div>
+<dialog class="tldr" id="tldr" aria-labelledby="tldrH"></dialog>
 <aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
   <div class="bar2"><button class="iconbtn" id="dBack" data-en="← Back">← Назад</button><span class="sp"></span><button class="iconbtn" id="dClose" data-en="Close ✕">Затвори ✕</button></div>
   <div class="dhead" id="drawerHead"></div>
@@ -1422,6 +1440,54 @@ const I18N = [...document.querySelectorAll("[data-en]")].map(el=>[el, el.innerHT
 const I18A = [...document.querySelectorAll("[data-en-aria]")].map(el=>[el, el.getAttribute("aria-label")]);
 const I18P = [...document.querySelectorAll("[data-en-ph]")].map(el=>[el, el.getAttribute("placeholder")]);
 const langBtn = $("langBtn");
+// ---------- TL;DR: the whole site in six points, numbers computed from the data so they stay current
+function tldrHTML(){
+  const s = D.stats, m = s.m, n = fmt, L = D.laws;
+  const props = L.flatMap(l=>l.props), acc = props.filter(p=>OK.has(p.o)).length;
+  const late = L.filter(lateLaw).length, other = L.filter(l=>l.other.length).length;
+  const strong = D.fp.filter(f=>f.tier==="strong"), sAcc = strong.filter(f=>OK.has(f.o)).length, sState = strong.filter(f=>f.ot==="public").length;
+  const withCo = Object.values(MP).filter(x=>(x.co||[]).length && ["matched","ambiguous"].includes(shLevel(x))).length, shared = CO.filter(c=>c.m.length>1 && c.t!=="state").length;
+  const cfMps = new Set(CF.map(c=>c.mp)).size, cfNow = CF.filter(c=>c.st==="active").length;
+  const pts = [
+    [T("Всеки закон, проследен назад.","Every law, traced back."),
+     T(`${n(s.laws)} закона от Държавен вестник от декември 2021 г. насам, в ${m.asm} народни събрания: кой ги е внесъл, кой ги е променил и какво е прието.`,
+       `${n(s.laws)} laws from the State Gazette since December 2021, across ${m.asm} National Assemblies: who filed them, who changed them and what passed.`), "laws", "laws"],
+    [T("Законите се пренаписват между двете гласувания.","Laws are rewritten between the two votes."),
+     T(`Депутатите са внесли ${n(props.length)} предложения за второ четене; ${pct(acc,props.length)}% са приети. ${other} закона променят и други закони в преходните си разпоредби, ${late} от тях с текст, добавен едва на второ четене.`,
+       `MPs filed ${n(props.length)} amendments for the second vote; ${pct(acc,props.length)}% passed. ${other} laws also change other laws in their final provisions, ${late} of them with text added only at the second vote.`), "laws", "laws"],
+    [T("Чужди думи влизат в закона.","Outside words get into the law."),
+     T(`${strong.length} пъти предложение на депутат повтаря дума по дума становище на организация; ${sAcc} от тях са приети. ${sState} идват от държавни институции като министерства и агенции; често държавата пише текста, а депутатът го внася.`,
+       `${strong.length} times an MP's amendment repeats an organisation's opinion word for word; ${sAcc} of them passed. ${sState} come from state institutions such as ministries and agencies; often the state writes the text and an MP files it.`), "influence", "influence"],
+    [T("Депутати с фирми в сектора на закона.","MPs with companies in the law's sector."),
+     T(`${withCo} от ${n(m.people)} депутати имат потвърдени роли във фирми или организации; ${shared} фирми са общи за двама или повече. ${CF.length} пъти ${cfMps} депутати са внесли или променили закон в сектора на своя фирма, ${cfNow} от тях докато са имали ролята.`,
+       `${withCo} of ${n(m.people)} MPs have confirmed roles in companies or organisations; ${shared} companies are shared by two or more. ${CF.length} times, ${cfMps} MPs filed or changed a law in the sector of their own company, ${cfNow} of them while holding the role.`), "links", "links"],
+    [T("Започнете от най-силните следи.","Start with the strongest leads."),
+     T("„Първо вижте това“ на началната страница показва шестте най-силни случая, подредени по едни и същи правила за всички партии. Търсачката горе намира всеки депутат, фирма или закон.",
+       "\"Start here\" on the home page shows the six strongest cases, ranked by the same rules for every party. The search box at the top finds any MP, company or law."), "overview", "tops"],
+    [T("Следа, не доказателство.","A lead, not proof."),
+     T(`Съпоставянето е автоматично; ${n(m.unclear_pct)}% от решенията не са разчетени. Всеки елемент води до първоизточника. Прочетете документа, преди да правите изводи.`,
+       `The matching is automatic; ${n(m.unclear_pct)}% of outcomes could not be read. Every item links to its primary source. Read the document before drawing conclusions.`), "method", "method"],
+  ];
+  const SEC = {laws:"laws", influence:"influence", links:"links", overview:"overview", method:"method"};
+  const GO = {laws:T("Към законите","To the laws"), influence:T("Към Влияние","To Influence"), links:T("Към Връзки","To Connections"), tops:T("Към най-силните следи","To the strongest leads"), method:T("Как работи и ограничения","How it works and its limits")};
+  return `<div class="tw"><div class="th"><h2 id="tldrH">${T("Law Trail за 30 секунди","Law Trail in 30 seconds")}</h2><button class="iconbtn" type="button" data-tldrclose="1">${T("Затвори ✕","Close ✕")}</button></div>
+    <p class="sub">${T(`Данни към ${dt(m.updated)}.`,`Data as of ${dt(m.updated)}.`)}</p>
+    <ol>${pts.map(([h,p,v,g])=>`<li data-sec="${SEC[v]}"><b>${h}</b><p>${p}</p><button class="go" type="button" data-tldrgo="${g}">${GO[g]} →</button></li>`).join("")}</ol>
+    ${CONTACT?`<p class="tf">${T("Грешка или възражение?","An error, or an objection?")} <a href="${mailto("Law Trail")}">${esc(CONTACT)}</a></p>`:""}</div>`;
+}
+const tldr = $("tldr");
+function openTldr(){ tldr.innerHTML = tldrHTML(); try{ tldr.showModal(); }catch(e){ tldr.setAttribute("open",""); } }
+$("tldrBtn").addEventListener("click", openTldr);
+tldr.addEventListener("click", e=>{
+  if (e.target === tldr || e.target.closest("[data-tldrclose]")) { tldr.close(); return; }
+  const g = e.target.closest("[data-tldrgo]"); if (!g) return;
+  tldr.close(); closeDrawer();
+  const v = g.dataset.tldrgo;
+  if (v === "tops"){ go("overview"); requestAnimationFrame(()=>$("tops").scrollIntoView({behavior:"smooth", block:"start"})); }
+  else go(v);
+});
+document.addEventListener("click", e=>{ if (e.target.closest("[data-tldr]")) openTldr(); });
+
 function applyLang(){
   document.documentElement.lang = LANG;
   for (const [el,bg] of I18N) el.innerHTML = LANG==="en" ? el.dataset.en : bg;
@@ -1434,6 +1500,7 @@ function applyLang(){
   if (curLaw && current==="law") lawPage(LAW[curLaw]);
   if (!drawer.hidden && stack.length){ for (let i=0;i<stack.length;i++) stack[i] = stack[i].make(); show(stack[stack.length-1], false); }
   if (!sres.hidden){ hits = search(qEl.value); drawHits(); }
+  if (tldr.open) tldr.innerHTML = tldrHTML();
 }
 // light / dark: follows the system until the viewer picks one; the choice is remembered
 const themeBtn = $("themeBtn"), darkMQ = matchMedia("(prefers-color-scheme: dark)");
